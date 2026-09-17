@@ -52,6 +52,12 @@ void main() {
       expect(baris.length, 32);
       expect(baris.endsWith('Rp 1.000'), isTrue);
     });
+
+    test('kolom kanan selebar kertas tidak membuat baris melebihi lebar', () {
+      final baris = duaKolom('X', 'A' * 40, 32);
+      expect(baris.length, 32);
+      expect(baris, 'A' * 32);
+    });
   });
 
   group('bungkusKata', () {
