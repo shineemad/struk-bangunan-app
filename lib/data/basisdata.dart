@@ -83,19 +83,27 @@ Future<void> siapkanSkema(Database db) async {
 /// Mengambil nomor nota berikutnya dan menaikkan pencacahnya dalam satu
 /// transaksi, sehingga satu nomor tidak pernah terpakai dua kali.
 Future<String> ambilNomorNotaBerikutnya(Database db) async {
-  return db.transaction((txn) async {
-    final baris = await txn.query(
-      'meta',
-      where: 'kunci = ?',
-      whereArgs: ['nomor_nota_berikutnya'],
-    );
-    final sekarang = int.parse(baris.first['nilai'] as String);
-    await txn.update(
-      'meta',
-      {'nilai': (sekarang + 1).toString()},
-      where: 'kunci = ?',
-      whereArgs: ['nomor_nota_berikutnya'],
-    );
-    return sekarang.toString().padLeft(4, '0');
-  });
+  return db.transaction(_ambilNomorNota);
+}
+
+/// Seperti [ambilNomorNotaBerikutnya], tetapi transaksi di sekelilingnya adalah
+/// tanggung jawab pemanggil; fungsi ini tidak membuka transaksi sendiri.
+Future<String> ambilNomorNotaBerikutnyaDalam(DatabaseExecutor txn) {
+  return _ambilNomorNota(txn);
+}
+
+Future<String> _ambilNomorNota(DatabaseExecutor txn) async {
+  final baris = await txn.query(
+    'meta',
+    where: 'kunci = ?',
+    whereArgs: ['nomor_nota_berikutnya'],
+  );
+  final sekarang = int.parse(baris.first['nilai'] as String);
+  await txn.update(
+    'meta',
+    {'nilai': (sekarang + 1).toString()},
+    where: 'kunci = ?',
+    whereArgs: ['nomor_nota_berikutnya'],
+  );
+  return sekarang.toString().padLeft(4, '0');
 }

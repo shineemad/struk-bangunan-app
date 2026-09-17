@@ -88,6 +88,38 @@ void main() {
     expect(baris, hasLength(1));
   });
 
+  test('menjalankan skema ulang tidak mereset pencacah nota', () async {
+    final db = await bukaBasisdataUji();
+    addTearDown(db.close);
+    await siapkanSkema(db);
+
+    expect(await ambilNomorNotaBerikutnya(db), '0001');
+    await siapkanSkema(db);
+
+    // Bila baris pencacah memakai ConflictAlgorithm.replace, angka ini kembali
+    // ke '0001' dan aplikasi menerbitkan ulang nomor yang sudah tercetak.
+    // Menghitung jumlah baris saja tidak menangkapnya.
+    expect(await ambilNomorNotaBerikutnya(db), '0002');
+  });
+
+  test(
+    'nomor nota bisa diambil dari dalam transaksi yang sudah terbuka',
+    () async {
+      final db = await bukaBasisdataUji();
+      addTearDown(db.close);
+      await siapkanSkema(db);
+
+      final hasil = await db.transaction((txn) async {
+        return [
+          await ambilNomorNotaBerikutnyaDalam(txn),
+          await ambilNomorNotaBerikutnyaDalam(txn),
+        ];
+      });
+
+      expect(hasil, ['0001', '0002']);
+    },
+  );
+
   test('menghapus transaksi ikut menghapus itemnya', () async {
     final db = await bukaBasisdataUji();
     addTearDown(db.close);
