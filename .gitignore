@@ -9,7 +9,6 @@ build/
 .pub/
 .flutter-plugins
 .flutter-plugins-dependencies
-pubspec.lock
 
 # Android
 android/.gradle/
