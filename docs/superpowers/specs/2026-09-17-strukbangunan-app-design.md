@@ -115,6 +115,8 @@ Seluruh data berada di dalam sandbox aplikasi pada HP. Aplikasi **tidak mencantu
 
 Semua nilai uang disimpan sebagai `int` rupiah penuh. Kuantitas memakai `double` karena "1,5 rit pasir" itu nyata. Subtotal dibulatkan ke rupiah terdekat **sekali saja**, saat item dibuat, lalu disimpan.
 
+Kuantitas dibatasi **dua angka di belakang koma pada saat dimasukkan**. Tanpa batas itu, angka yang tercetak di struk bisa berbeda dari angka yang dipakai menghitung: qty `0,333` tampil sebagai `0,33` sementara subtotalnya dihitung dari `0,333`, sehingga baris struk terbaca `0,33 x 1.000 = 333` dan pembeli berhak mempertanyakannya. Pembatasan dilakukan di titik masukan, bukan saat mencetak, supaya nilai yang disimpan dan nilai yang ditampilkan selalu sama.
+
 ### Profil toko — `shared_preferences`
 
 `nama_toko`, `alamat_toko`, `nohp_toko`, `catatan_toko`, `nama_kasir`, `lebar_kertas` (58 atau 80), `format_kiriman` (`gambar` atau `pdf`, bawaan `gambar`), `printer_terakhir_mac`, `printer_terakhir_nama`, `draf_keranjang` (JSON keranjang berjalan), `backup_terakhir_ms`, `backup_ditunda_sampai_ms`.
