@@ -28,7 +28,11 @@ class ItemBelanja {
       throw ArgumentError.value(nama, 'nama', 'Nama bahan tidak boleh kosong');
     }
     if (qty <= 0) {
-      throw ArgumentError.value(qty, 'qty', 'Jumlah harus lebih besar dari nol');
+      throw ArgumentError.value(
+        qty,
+        'qty',
+        'Jumlah harus lebih besar dari nol',
+      );
     }
     if (hargaSatuan < 0) {
       throw ArgumentError.value(

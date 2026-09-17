@@ -9,10 +9,7 @@ void main() {
   });
 
   test('kertas 80mm memberi 48 kolom', () {
-    const profil = ProfilToko(
-      namaToko: 'TB. SINAR BANGUNAN',
-      lebarKertas: 80,
-    );
+    const profil = ProfilToko(namaToko: 'TB. SINAR BANGUNAN', lebarKertas: 80);
     expect(profil.lebarKolom, 48);
   });
 

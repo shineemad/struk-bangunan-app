@@ -60,11 +60,13 @@ void main() {
 
   test('menolak qty nol atau negatif', () {
     expect(
-      () => ItemBelanja(nama: 'Semen', qty: 0, satuan: 'sak', hargaSatuan: 1000),
+      () =>
+          ItemBelanja(nama: 'Semen', qty: 0, satuan: 'sak', hargaSatuan: 1000),
       throwsArgumentError,
     );
     expect(
-      () => ItemBelanja(nama: 'Semen', qty: -1, satuan: 'sak', hargaSatuan: 1000),
+      () =>
+          ItemBelanja(nama: 'Semen', qty: -1, satuan: 'sak', hargaSatuan: 1000),
       throwsArgumentError,
     );
   });

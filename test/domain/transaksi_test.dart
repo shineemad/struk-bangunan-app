@@ -2,12 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:struk_bangunan/domain/item_belanja.dart';
 import 'package:struk_bangunan/domain/transaksi.dart';
 
-ItemBelanja _item(String nama, double qty, int harga) => ItemBelanja(
-      nama: nama,
-      qty: qty,
-      satuan: 'pcs',
-      hargaSatuan: harga,
-    );
+ItemBelanja _item(String nama, double qty, int harga) =>
+    ItemBelanja(nama: nama, qty: qty, satuan: 'pcs', hargaSatuan: harga);
 
 void main() {
   test('total adalah jumlah seluruh subtotal', () {
