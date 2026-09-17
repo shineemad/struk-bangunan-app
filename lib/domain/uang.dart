@@ -12,8 +12,10 @@ String formatRupiah(int nilai) {
   return nilai < 0 ? '-$hasil' : hasil.toString();
 }
 
-/// "Rp 65.000" -> 65000. Null bila tidak ada digit atau melebihi [maksRupiah].
+/// "Rp 65.000" -> 65000. Null bila tidak ada digit, bertanda minus, atau
+/// melebihi [maksRupiah].
 int? parseRupiah(String teks) {
+  if (teks.contains('-')) return null;
   final digit = teks.replaceAll(RegExp(r'[^0-9]'), '');
   if (digit.isEmpty) return null;
   final nilai = int.tryParse(digit);

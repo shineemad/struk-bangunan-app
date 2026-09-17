@@ -29,6 +29,15 @@ void main() {
       expect(parseRupiah('abc'), isNull);
     });
 
+    test('mengembalikan null bila bertanda minus', () {
+      expect(parseRupiah('-25.000'), isNull);
+      expect(parseRupiah('-25000'), isNull);
+    });
+
+    test('menerima nilai tepat di batas', () {
+      expect(parseRupiah('999.999.999'), 999999999);
+    });
+
     test('mengembalikan null bila melebihi batas', () {
       expect(parseRupiah('1.000.000.000'), isNull);
     });
