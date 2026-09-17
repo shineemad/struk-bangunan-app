@@ -231,8 +231,8 @@ Semen Tiga Roda
                3x65.000  195.000
 Pasir (1 rit)            850.000
 Paku 7cm        2x20.000  40.000
-Keramik Granit Roman 60x60
-Putih Doff
+Keramik Granit Roman 60x60 Putih
+Doff
               4x185.000  740.000
 --------------------------------
 TOTAL               Rp 1.825.000
@@ -267,6 +267,7 @@ selain itu:
 
 Aturan tambahan:
 
+- Pembungkusan nama bersifat **rakus (greedy)**: kata dimasukkan ke baris berjalan selama masih muat dalam `W`, baru pindah baris. Pada contoh di atas, `Putih` masih muat di baris pertama sehingga `Doff` turun sendirian.
 - Satu kata tunggal yang lebih panjang dari `W` dipotong paksa pada `W`. Ini satu-satunya keadaan yang memotong nama.
 - `qty` ditampilkan tanpa desimal bila bulat (`3`), dengan koma bila pecahan (`1,5`).
 - Tanda kali ditulis sebagai huruf **`x` biasa**, bukan simbol `×`. Banyak printer thermal murah tidak memiliki karakter itu pada code page bawaannya dan akan mencetak sampah.
