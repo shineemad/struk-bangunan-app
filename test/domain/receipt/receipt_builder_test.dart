@@ -126,10 +126,7 @@ Kembali             Rp   175.000
 
   test('kertas 80mm menghasilkan baris selebar 48 kolom', () {
     final dokumen = bangunStruk(
-      profil: const ProfilToko(
-        namaToko: 'TB. SINAR BANGUNAN',
-        lebarKertas: 80,
-      ),
+      profil: const ProfilToko(namaToko: 'TB. SINAR BANGUNAN', lebarKertas: 80),
       transaksi: _transaksiContoh(),
     );
     expect(dokumen.lebar, 48);
