@@ -53,4 +53,35 @@ void main() {
 
     expect(await repo.muat(), isEmpty);
   });
+
+  test('baris yang cacat dilewati, bukan menggagalkan seluruh draf', () async {
+    // Simulasi draf dengan baris malformed (harga_satuan berupa string)
+    // dan baris well-formed yang harus tetap dimuat.
+    SharedPreferences.setMockInitialValues({
+      'draf_keranjang': '''
+[
+  {
+    "nama": 123,
+    "qty": 1,
+    "satuan": "sak",
+    "harga_satuan": 65000
+  },
+  {
+    "nama": "Semen Baik",
+    "qty": 2,
+    "satuan": "sak",
+    "harga_satuan": 75000
+  }
+]
+      ''',
+    });
+    final repo = DrafRepository(await SharedPreferences.getInstance());
+
+    final hasil = await repo.muat();
+
+    expect(hasil, hasLength(1));
+    expect(hasil[0].nama, 'Semen Baik');
+    expect(hasil[0].qty, 2);
+    expect(hasil[0].subtotal, 150000);
+  });
 }
