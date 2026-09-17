@@ -108,16 +108,28 @@ Diharapkan: GAGAL dengan error kompilasi — `bantuan_basisdata.dart` belum ada.
 Buat `test/bantuan_basisdata.dart`:
 
 ```dart
-import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+bool _ffiSiap = false;
 
 /// Basis data sqflite dalam memori untuk pengujian. Memakai FFI sehingga
 /// berjalan di komputer tanpa emulator Android.
 Future<Database> bukaBasisdataUji() async {
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
-  return databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
+  if (!_ffiSiap) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    _ffiSiap = true;
+  }
+  // Tanpa singleInstance: false, semua pemanggilan berbagi satu basis data
+  // `:memory:` yang sama sehingga data antar test saling bocor.
+  return databaseFactoryFfi.openDatabase(
+    inMemoryDatabasePath,
+    options: OpenDatabaseOptions(singleInstance: false),
+  );
 }
 ```
+
+**Dua hal yang tidak boleh diubah oleh tugas berikutnya.** Pustaka publik paket ini bernama `sqflite_ffi.dart`, bukan `sqflite_common_ffi.dart` — impor yang keliru gagal kompilasi. Dan karena `singleInstance: false`, setiap pemanggil memegang koneksinya sendiri dan **wajib menutupnya sendiri** dengan `addTearDown(db.close)`.
 
 - [ ] **Step 5: Jalankan test untuk memastikan lulus**
 
@@ -692,7 +704,7 @@ Buat `test/data/transaksi_repository_test.dart`:
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:struk_bangunan/data/basisdata.dart';
 import 'package:struk_bangunan/data/transaksi_repository.dart';
 import 'package:struk_bangunan/domain/item_belanja.dart';
@@ -1044,7 +1056,7 @@ Buat `test/data/favorit_repository_test.dart`:
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:struk_bangunan/data/basisdata.dart';
 import 'package:struk_bangunan/data/favorit_bawaan.dart';
 import 'package:struk_bangunan/data/favorit_repository.dart';
@@ -1394,7 +1406,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:struk_bangunan/data/backup_service.dart';
 import 'package:struk_bangunan/data/basisdata.dart';
 import 'package:struk_bangunan/data/favorit_repository.dart';
