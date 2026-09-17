@@ -24,16 +24,16 @@
 
 ## Struktur berkas yang dihasilkan rencana ini
 
-| Berkas | Tanggung jawab |
-|---|---|
-| `lib/data/basisdata.dart` | Membuka basis data, skema, migrasi, dan nomor nota berikutnya |
-| `lib/data/favorit_bawaan.dart` | Daftar bahan bangunan bawaan beserta satuan lazimnya |
-| `lib/data/profil_repository.dart` | Baca/tulis profil toko di `shared_preferences` |
-| `lib/data/draf_repository.dart` | Simpan/pulihkan keranjang yang sedang berjalan |
-| `lib/data/transaksi_repository.dart` | Simpan nota, ambil riwayat, rekap harian |
-| `lib/data/favorit_repository.dart` | Daftar favorit, pembelajaran frekuensi, sembunyikan |
-| `lib/data/backup_service.dart` | Ekspor seluruh data ke JSON dan pulihkan dengan validasi |
-| `test/bantuan_basisdata.dart` | Penyiapan basis data dalam memori untuk pengujian |
+| Berkas                               | Tanggung jawab                                                |
+| ------------------------------------ | ------------------------------------------------------------- |
+| `lib/data/basisdata.dart`            | Membuka basis data, skema, migrasi, dan nomor nota berikutnya |
+| `lib/data/favorit_bawaan.dart`       | Daftar bahan bangunan bawaan beserta satuan lazimnya          |
+| `lib/data/profil_repository.dart`    | Baca/tulis profil toko di `shared_preferences`                |
+| `lib/data/draf_repository.dart`      | Simpan/pulihkan keranjang yang sedang berjalan                |
+| `lib/data/transaksi_repository.dart` | Simpan nota, ambil riwayat, rekap harian                      |
+| `lib/data/favorit_repository.dart`   | Daftar favorit, pembelajaran frekuensi, sembunyikan           |
+| `lib/data/backup_service.dart`       | Ekspor seluruh data ke JSON dan pulihkan dengan validasi      |
+| `test/bantuan_basisdata.dart`        | Penyiapan basis data dalam memori untuk pengujian             |
 
 Rencana 3 akan memakai lapisan ini untuk penyaji keluaran (ESC/POS, PDF, PNG, printer, berbagi). Rencana 4 membangun antarmuka.
 
@@ -42,11 +42,13 @@ Rencana 3 akan memakai lapisan ini untuk penyaji keluaran (ESC/POS, PDF, PNG, pr
 ### Task 1: Dependensi dan harness uji basis data
 
 **Files:**
+
 - Modify: `pubspec.yaml`
 - Create: `test/bantuan_basisdata.dart`
 - Create: `test/data/bantuan_basisdata_test.dart`
 
 **Interfaces:**
+
 - Consumes: —
 - Produces: `Future<Database> bukaBasisdataUji()` yang mengembalikan basis data sqflite dalam memori, dan `sqfliteFfiInit()` sudah terpanggil.
 
@@ -153,10 +155,12 @@ git commit -m "chore: dependensi penyimpanan dan harness uji basis data"
 ### Task 2: Skema basis data
 
 **Files:**
+
 - Create: `lib/data/basisdata.dart`
 - Test: `test/data/basisdata_test.dart`
 
 **Interfaces:**
+
 - Consumes: `bukaBasisdataUji()` dari `test/bantuan_basisdata.dart`
 - Produces:
   - `const int versiSkema = 1;`
@@ -421,12 +425,14 @@ git commit -m "feat(data): skema basis data dan nomor nota berurutan"
 ### Task 3: Profil toko dan draf keranjang
 
 **Files:**
+
 - Create: `lib/data/profil_repository.dart`
 - Create: `lib/data/draf_repository.dart`
 - Test: `test/data/profil_repository_test.dart`
 - Test: `test/data/draf_repository_test.dart`
 
 **Interfaces:**
+
 - Consumes: `ProfilToko` dan `ItemBelanja` dari `lib/domain/`
 - Produces:
   - `class ProfilRepository` dengan `Future<ProfilToko?> muat()` dan `Future<void> simpan(ProfilToko profil)`
@@ -691,10 +697,12 @@ git commit -m "feat(data): penyimpanan profil toko dan draf keranjang"
 ### Task 4: Riwayat transaksi
 
 **Files:**
+
 - Create: `lib/data/transaksi_repository.dart`
 - Test: `test/data/transaksi_repository_test.dart`
 
 **Interfaces:**
+
 - Consumes: `siapkanSkema`, `ambilNomorNotaBerikutnya` dari `basisdata.dart`; `Transaksi` dan `ItemBelanja` dari domain
 - Produces:
   - `class RekapHarian` dengan `int jumlahNota` dan `int totalRupiah`
@@ -1040,11 +1048,13 @@ git commit -m "feat(data): riwayat transaksi dan rekap harian"
 ### Task 5: Bahan favorit
 
 **Files:**
+
 - Create: `lib/data/favorit_bawaan.dart`
 - Create: `lib/data/favorit_repository.dart`
 - Test: `test/data/favorit_repository_test.dart`
 
 **Interfaces:**
+
 - Consumes: `siapkanSkema` dari `basisdata.dart`
 - Produces:
   - `class BahanFavorit` dengan `String nama`, `String satuanTerakhir`, `int jumlahPakai`, `bool bawaan`
@@ -1391,10 +1401,12 @@ git commit -m "feat(data): daftar bahan favorit yang belajar dari pemakaian"
 ### Task 6: Cadangkan dan pulihkan
 
 **Files:**
+
 - Create: `lib/data/backup_service.dart`
 - Test: `test/data/backup_service_test.dart`
 
 **Interfaces:**
+
 - Consumes: `siapkanSkema` dari `basisdata.dart`, `ProfilRepository`, `TransaksiRepository`, `FavoritRepository`
 - Produces:
   - `class BackupRusak implements Exception` dengan `String pesan`
