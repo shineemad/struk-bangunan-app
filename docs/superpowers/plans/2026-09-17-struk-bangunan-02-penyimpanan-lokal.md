@@ -234,10 +234,14 @@ void main() {
     addTearDown(db.close);
     await siapkanSkema(db);
 
-    final hasil = <String>[];
-    for (var i = 0; i < 50; i++) {
-      hasil.add(await ambilNomorNotaBerikutnya(db));
-    }
+    // Semua pemanggilan dimulai sebelum satu pun ditunggu, sehingga baca dan
+    // tulis pencacah benar-benar berebut. Versi berurutan (await di dalam
+    // loop) tetap lulus meski transaksinya dibuang, jadi ia tidak menguji apa
+    // pun yang namanya sebut.
+    final hasil = await Future.wait([
+      for (var i = 0; i < 50; i++) ambilNomorNotaBerikutnya(db),
+    ]);
+
     expect(hasil.toSet(), hasLength(50));
   });
 
@@ -399,6 +403,8 @@ Future<String> ambilNomorNotaBerikutnya(Database db) async {
 
 Jalankan: `flutter test test/data/basisdata_test.dart`
 Diharapkan: PASS, 7 test.
+
+**Jebakan untuk Tugas 4, 5, dan 6:** `PRAGMA foreign_keys` berlaku per koneksi, dan `siapkanSkema` sengaja tidak menyalakannya. Aplikasi sungguhan menyalakannya di `onConfigure` milik `bukaBasisdata()`, tetapi basis data uji **tidak**. Artinya `ON DELETE CASCADE` mati di dalam test kecuali test itu menyalakannya sendiri. Jangan mengandalkan cascade di test tanpa menjalankan `PRAGMA foreign_keys = ON` lebih dulu.
 
 - [ ] **Step 5: Gerbang mutu dan commit**
 
