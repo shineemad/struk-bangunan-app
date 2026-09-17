@@ -703,7 +703,7 @@ git commit -m "feat(data): penyimpanan profil toko dan draf keranjang"
 
 **Interfaces:**
 
-- Consumes: `siapkanSkema`, `ambilNomorNotaBerikutnya` dari `basisdata.dart`; `Transaksi` dan `ItemBelanja` dari domain
+- Consumes: `siapkanSkema`, `ambilNomorNotaBerikutnyaDalam` dari `basisdata.dart`; `Transaksi` dan `ItemBelanja` dari domain
 - Produces:
   - `class RekapHarian` dengan `int jumlahNota` dan `int totalRupiah`
   - `class TransaksiRepository(Database db)` dengan:
@@ -892,8 +892,35 @@ void main() {
     expect(hasil.bayar, isNull);
     expect(hasil.kembali, isNull);
   });
+
+  test('nota yang gagal tersimpan tidak membakar nomor nota', () async {
+    final (db, repo) = await _siap();
+    addTearDown(db.close);
+
+    // Baris ini menyerobot '0001', sehingga penyisipan di dalam simpan()
+    // melanggar UNIQUE dan seluruh transaksinya dibatalkan.
+    await db.insert('transaksi', {
+      'nomor_nota': '0001',
+      'waktu_ms': 1000,
+      'total': 1000,
+    });
+
+    await expectLater(
+      repo.simpan(items: [_item('Semen', 1, 65000)], waktu: DateTime(2026, 9, 17)),
+      throwsA(isA<DatabaseException>()),
+    );
+
+    final baris = await db.query(
+      'meta',
+      where: 'kunci = ?',
+      whereArgs: ['nomor_nota_berikutnya'],
+    );
+    expect(baris.first['nilai'], '1');
+  });
 }
 ```
+
+**Nomor nota dipesan di dalam transaksi, bukan sebelumnya.** Test terakhir itulah penjaganya. Bila `simpan` memanggil `ambilNomorNotaBerikutnya(_db)` lebih dulu — yang membuka transaksinya sendiri dan langsung commit — pencacah sudah naik sebelum barisnya disisipkan, sehingga nota yang gagal meninggalkan lubang permanen di penomoran. Karena itu `simpan` memakai `ambilNomorNotaBerikutnyaDalam(txn)` di dalam transaksi yang sama dengan penyisipannya. Memanggil `ambilNomorNotaBerikutnya(Database)` dari dalam transaksi akan **menggantung selamanya**, bukan gagal.
 
 - [ ] **Step 2: Jalankan test untuk memastikan gagal**
 
@@ -925,20 +952,23 @@ class TransaksiRepository {
 
   /// Menyimpan nota dan mengembalikannya lengkap dengan nomor nota yang baru
   /// dipesan. Nota yang sudah tersimpan tidak pernah diubah lagi.
+  ///
+  /// Nomor dipesan di dalam transaksi yang sama dengan penyisipan barisnya,
+  /// sehingga nota yang gagal tersimpan tidak meninggalkan lubang di
+  /// penomoran.
   Future<Transaksi> simpan({
     required List<ItemBelanja> items,
     required DateTime waktu,
     int? bayar,
-  }) async {
-    final nomorNota = await ambilNomorNotaBerikutnya(_db);
-    final nota = Transaksi(
-      nomorNota: nomorNota,
-      waktu: waktu,
-      items: items,
-      bayar: bayar,
-    );
+  }) {
+    return _db.transaction((txn) async {
+      final nota = Transaksi(
+        nomorNota: await ambilNomorNotaBerikutnyaDalam(txn),
+        waktu: waktu,
+        items: items,
+        bayar: bayar,
+      );
 
-    await _db.transaction((txn) async {
       final id = await txn.insert('transaksi', {
         'nomor_nota': nota.nomorNota,
         'waktu_ms': nota.waktu.millisecondsSinceEpoch,
@@ -959,9 +989,9 @@ class TransaksiRepository {
           'urutan': i,
         });
       }
-    });
 
-    return nota;
+      return nota;
+    });
   }
 
   Future<List<Transaksi>> terbaru({int batas = 50}) async {
@@ -1029,7 +1059,7 @@ class TransaksiRepository {
 - [ ] **Step 4: Jalankan test untuk memastikan lulus**
 
 Jalankan: `flutter test test/data/transaksi_repository_test.dart`
-Diharapkan: PASS, 10 test.
+Diharapkan: PASS, 11 test.
 
 - [ ] **Step 5: Gerbang mutu dan commit**
 
