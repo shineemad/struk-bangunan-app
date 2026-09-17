@@ -16,17 +16,17 @@ Prinsip dari PRD dipertahankan: **"Minimal Input, Maximum Output."**
 
 ### Keputusan pokok
 
-| Keputusan | Pilihan | Alasan |
-|---|---|---|
-| Platform | Android saja | Printer thermal murah memakai Bluetooth Classic SPP yang tertutup di iOS. Menjanjikan iOS berarti menjanjikan fitur yang mati |
-| Lingkup v1 | PRD + qty + riwayat + favorit + backup | KPI 45 detik tidak tercapai tanpa favorit; aplikasi tanpa riwayat terasa seperti kalkulator sekali pakai |
-| Isi daftar favorit | Preset bawaan + belajar dari riwayat | Manfaat terasa sejak hari pertama, lalu menyesuaikan diri dengan barang toko tersebut |
-| Harga di favorit | **Tidak disimpan** | Harga bahan bangunan berubah mingguan; harga basi yang terpakai diam-diam bisa membuat toko rugi |
-| Format kiriman WhatsApp | PNG utama, PDF opsional | PNG tampil langsung di dalam chat tanpa perlu diunduh |
-| Tata letak layar utama | Satu layar penuh | Tidak ada perpindahan layar, pengguna tidak bisa tersesat |
-| Format baris item struk | C-adaptif | Satu baris bila muat, dua baris bila nama panjang. Nama tidak pernah dipotong |
-| Arsitektur keluaran | Satu model struk, tiga penyaji | Aturan pemformatan hidup di satu tempat dan bisa diuji tanpa perangkat keras |
-| Satuan nilai uang | `int` rupiah penuh | `double` menghasilkan galat pembulatan yang tidak bisa dijelaskan ke pembeli |
+| Keputusan               | Pilihan                                | Alasan                                                                                                                        |
+| ----------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Platform                | Android saja                           | Printer thermal murah memakai Bluetooth Classic SPP yang tertutup di iOS. Menjanjikan iOS berarti menjanjikan fitur yang mati |
+| Lingkup v1              | PRD + qty + riwayat + favorit + backup | KPI 45 detik tidak tercapai tanpa favorit; aplikasi tanpa riwayat terasa seperti kalkulator sekali pakai                      |
+| Isi daftar favorit      | Preset bawaan + belajar dari riwayat   | Manfaat terasa sejak hari pertama, lalu menyesuaikan diri dengan barang toko tersebut                                         |
+| Harga di favorit        | **Tidak disimpan**                     | Harga bahan bangunan berubah mingguan; harga basi yang terpakai diam-diam bisa membuat toko rugi                              |
+| Format kiriman WhatsApp | PNG utama, PDF opsional                | PNG tampil langsung di dalam chat tanpa perlu diunduh                                                                         |
+| Tata letak layar utama  | Satu layar penuh                       | Tidak ada perpindahan layar, pengguna tidak bisa tersesat                                                                     |
+| Format baris item struk | C-adaptif                              | Satu baris bila muat, dua baris bila nama panjang. Nama tidak pernah dipotong                                                 |
+| Arsitektur keluaran     | Satu model struk, tiga penyaji         | Aturan pemformatan hidup di satu tempat dan bisa diuji tanpa perangkat keras                                                  |
+| Satuan nilai uang       | `int` rupiah penuh                     | `double` menghasilkan galat pembulatan yang tidak bisa dijelaskan ke pembeli                                                  |
 
 ---
 
@@ -34,20 +34,20 @@ Prinsip dari PRD dipertahankan: **"Minimal Input, Maximum Output."**
 
 ### Termasuk
 
-| ID | Fitur | Keterangan |
-|---|---|---|
-| FT-01 | Pengaturan toko | Nama, alamat, no. WA, pesan penutup, nama kasir, lebar kertas |
-| FT-02 | Input transaksi cepat | Nama bahan, jumlah, satuan, harga satuan |
-| FT-03 | Kalkulasi otomatis | Subtotal per item, total, uang bayar, kembalian |
-| FT-04 | Pratinjau struk | Tampilan identik dengan hasil cetak |
-| FT-05 | Cetak Bluetooth thermal | ESC/POS langsung, 58mm dan 80mm |
-| FT-06 | Bagikan via WhatsApp | PNG utama, PDF opsional, lewat share sheet |
-| FT-07 | Kuantitas & satuan | Jumlah pecahan diperbolehkan |
-| FT-08 | Bahan favorit | Preset bawaan, urutan mengikuti frekuensi pakai |
-| FT-09 | Riwayat transaksi | Daftar nota, rekap harian, cetak & kirim ulang |
-| FT-10 | Nomor nota otomatis | Berurutan, ikut terbawa saat backup |
-| FT-11 | Cadangkan & pulihkan | Satu file JSON lewat share sheet |
-| FT-12 | Pengingat backup | Banner setelah 30 hari tanpa backup |
+| ID    | Fitur                   | Keterangan                                                    |
+| ----- | ----------------------- | ------------------------------------------------------------- |
+| FT-01 | Pengaturan toko         | Nama, alamat, no. WA, pesan penutup, nama kasir, lebar kertas |
+| FT-02 | Input transaksi cepat   | Nama bahan, jumlah, satuan, harga satuan                      |
+| FT-03 | Kalkulasi otomatis      | Subtotal per item, total, uang bayar, kembalian               |
+| FT-04 | Pratinjau struk         | Tampilan identik dengan hasil cetak                           |
+| FT-05 | Cetak Bluetooth thermal | ESC/POS langsung, 58mm dan 80mm                               |
+| FT-06 | Bagikan via WhatsApp    | PNG utama, PDF opsional, lewat share sheet                    |
+| FT-07 | Kuantitas & satuan      | Jumlah pecahan diperbolehkan                                  |
+| FT-08 | Bahan favorit           | Preset bawaan, urutan mengikuti frekuensi pakai               |
+| FT-09 | Riwayat transaksi       | Daftar nota, rekap harian, cetak & kirim ulang                |
+| FT-10 | Nomor nota otomatis     | Berurutan, ikut terbawa saat backup                           |
+| FT-11 | Cadangkan & pulihkan    | Satu file JSON lewat share sheet                              |
+| FT-12 | Pengingat backup        | Banner setelah 30 hari tanpa backup                           |
 
 ### Sengaja tidak termasuk
 
@@ -123,12 +123,12 @@ Kuantitas dibatasi **dua angka di belakang koma pada saat dimasukkan**. Tanpa ba
 
 ### Basis data — `sqflite` (`strukbangunan.db`)
 
-| Tabel | Kolom |
-|---|---|
-| `transaksi` | `id`, `nomor_nota`, `waktu_ms`, `total`, `bayar` (nullable), `kembali` (nullable) |
-| `item` | `id`, `transaksi_id`, `nama`, `qty`, `satuan`, `harga_satuan`, `subtotal`, `urutan` |
-| `favorit` | `id`, `nama` (unik, `COLLATE NOCASE`), `satuan_terakhir`, `jumlah_pakai`, `terakhir_dipakai_ms`, `bawaan`, `disembunyikan` |
-| `meta` | `kunci`, `nilai` |
+| Tabel       | Kolom                                                                                                                      |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `transaksi` | `id`, `nomor_nota`, `waktu_ms`, `total`, `bayar` (nullable), `kembali` (nullable)                                          |
+| `item`      | `id`, `transaksi_id`, `nama`, `qty`, `satuan`, `harga_satuan`, `subtotal`, `urutan`                                        |
+| `favorit`   | `id`, `nama` (unik, `COLLATE NOCASE`), `satuan_terakhir`, `jumlah_pakai`, `terakhir_dipakai_ms`, `bawaan`, `disembunyikan` |
+| `meta`      | `kunci`, `nilai`                                                                                                           |
 
 `item.subtotal` disimpan dan tidak pernah dihitung ulang saat menampilkan. Nota lama yang dicetak ulang harus keluar persis seperti aslinya.
 
@@ -287,13 +287,13 @@ Setiap pesan memakai bahasa sehari-hari dan selalu menawarkan jalan keluar. Tida
 
 ### Bluetooth & printer
 
-| Kondisi | Perilaku |
-|---|---|
-| Izin Bluetooth belum diberikan | Penjelasan singkat, tombol "Izinkan". Bila ditolak permanen, tombol "Buka Pengaturan HP" |
-| Bluetooth HP mati | Banner "Bluetooth belum menyala" + tombol "Nyalakan" |
-| Printer belum pernah dipilih | Tombol Cetak langsung membuka daftar printer |
+| Kondisi                                | Perilaku                                                                                              |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Izin Bluetooth belum diberikan         | Penjelasan singkat, tombol "Izinkan". Bila ditolak permanen, tombol "Buka Pengaturan HP"              |
+| Bluetooth HP mati                      | Banner "Bluetooth belum menyala" + tombol "Nyalakan"                                                  |
+| Printer belum pernah dipilih           | Tombol Cetak langsung membuka daftar printer                                                          |
 | Printer tidak menyahut (batas 8 detik) | "Printer tidak terhubung. Sudah menyala? Kertasnya ada?" + tombol **Coba Lagi** dan **Kirim WA Saja** |
-| Cetak putus di tengah | Dianggap gagal cetak, tetapi transaksi sudah tersimpan dan bisa dicetak ulang dari Riwayat |
+| Cetak putus di tengah                  | Dianggap gagal cetak, tetapi transaksi sudah tersimpan dan bisa dicetak ulang dari Riwayat            |
 
 Izin: `BLUETOOTH_CONNECT` dan `BLUETOOTH_SCAN` untuk Android 12+; `BLUETOOTH`, `BLUETOOTH_ADMIN`, dan `ACCESS_FINE_LOCATION` untuk Android 11 ke bawah. Alasan izin lokasi dijelaskan ke pengguna agar tidak menimbulkan kecurigaan.
 
@@ -344,18 +344,18 @@ Tiga pemilik toko berusia 50+ mencoba tanpa didampingi, dengan waktu diukur.
 
 ## 9. Dependensi
 
-| Paket | Kegunaan |
-|---|---|
-| `shared_preferences` | Profil toko, draf keranjang, penanda backup |
-| `sqflite` | Transaksi, item, favorit, meta |
-| `sqflite_common_ffi` | Uji repository di komputer (dev only) |
-| `print_bluetooth_thermal` | Koneksi dan pengiriman ke printer Bluetooth |
-| `esc_pos_utils_plus` | Penyusunan perintah ESC/POS. Fork yang dirawat; `esc_pos_utils` asli sudah tidak diperbarui |
-| `pdf` | PDF opsional |
-| `share_plus` | Share sheet untuk PNG, PDF, dan berkas backup |
-| `file_picker` | Memilih berkas saat memulihkan data |
-| `provider` | Pengelolaan state |
-| `intl` | Format tanggal |
+| Paket                     | Kegunaan                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------- |
+| `shared_preferences`      | Profil toko, draf keranjang, penanda backup                                                 |
+| `sqflite`                 | Transaksi, item, favorit, meta                                                              |
+| `sqflite_common_ffi`      | Uji repository di komputer (dev only)                                                       |
+| `print_bluetooth_thermal` | Koneksi dan pengiriman ke printer Bluetooth                                                 |
+| `esc_pos_utils_plus`      | Penyusunan perintah ESC/POS. Fork yang dirawat; `esc_pos_utils` asli sudah tidak diperbarui |
+| `pdf`                     | PDF opsional                                                                                |
+| `share_plus`              | Share sheet untuk PNG, PDF, dan berkas backup                                               |
+| `file_picker`             | Memilih berkas saat memulihkan data                                                         |
+| `provider`                | Pengelolaan state                                                                           |
+| `intl`                    | Format tanggal                                                                              |
 
 Versi mengikuti rilis terbaru yang kompatibel saat implementasi dimulai; versi yang tercantum di PRD v1.0 sudah usang dan API `share_plus` telah berubah.
 
@@ -377,20 +377,20 @@ PNG dihasilkan dengan `RepaintBoundary` bawaan Flutter, tanpa paket tambahan.
 
 ## 11. Perbedaan dari PRD v1.0
 
-| Hal | PRD v1.0 | Desain ini | Alasan |
-|---|---|---|---|
-| Platform | Android & iOS | Android saja | Bluetooth Classic SPP tertutup di iOS |
-| Tipe harga | `double` | `int` rupiah | Galat pembulatan floating point |
-| Kuantitas | Tidak ada | Ada, termasuk pecahan | Toko bangunan menjual per sak, kubik, batang |
-| Paket cetak | `printing` atau `blue_thermal_printer` | `print_bluetooth_thermal` + `esc_pos_utils_plus` | `printing` tidak menjangkau printer Bluetooth thermal |
-| Kirim WA | "langsung ke nomor pembeli" | Share sheet, PNG utama | Android tidak mengizinkan lampiran berkas ke nomor tertentu dalam satu langkah |
-| Penyimpanan | Hanya `shared_preferences` | Ditambah `sqflite` | Riwayat memerlukan query per tanggal |
-| Riwayat | Tidak ada | Ada, beserta rekap harian | Pertanyaan pertama pemilik toko adalah omzet hari ini |
-| Favorit | Tidak ada | Ada | Tanpa ini, KPI 45 detik tidak tercapai |
-| Backup | Tidak ada | Ada, beserta pengingat | Data lokal hilang saat ganti HP |
-| Uang bayar & kembalian | Tidak ada | Ada | Menghapus beban hitung manual |
-| Nomor nota | Tidak ada | Ada | Rujukan saat komplain atau retur |
-| Versi dependensi | Ditetapkan | Mengikuti rilis terbaru | Versi di PRD sudah usang |
+| Hal                    | PRD v1.0                               | Desain ini                                       | Alasan                                                                         |
+| ---------------------- | -------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Platform               | Android & iOS                          | Android saja                                     | Bluetooth Classic SPP tertutup di iOS                                          |
+| Tipe harga             | `double`                               | `int` rupiah                                     | Galat pembulatan floating point                                                |
+| Kuantitas              | Tidak ada                              | Ada, termasuk pecahan                            | Toko bangunan menjual per sak, kubik, batang                                   |
+| Paket cetak            | `printing` atau `blue_thermal_printer` | `print_bluetooth_thermal` + `esc_pos_utils_plus` | `printing` tidak menjangkau printer Bluetooth thermal                          |
+| Kirim WA               | "langsung ke nomor pembeli"            | Share sheet, PNG utama                           | Android tidak mengizinkan lampiran berkas ke nomor tertentu dalam satu langkah |
+| Penyimpanan            | Hanya `shared_preferences`             | Ditambah `sqflite`                               | Riwayat memerlukan query per tanggal                                           |
+| Riwayat                | Tidak ada                              | Ada, beserta rekap harian                        | Pertanyaan pertama pemilik toko adalah omzet hari ini                          |
+| Favorit                | Tidak ada                              | Ada                                              | Tanpa ini, KPI 45 detik tidak tercapai                                         |
+| Backup                 | Tidak ada                              | Ada, beserta pengingat                           | Data lokal hilang saat ganti HP                                                |
+| Uang bayar & kembalian | Tidak ada                              | Ada                                              | Menghapus beban hitung manual                                                  |
+| Nomor nota             | Tidak ada                              | Ada                                              | Rujukan saat komplain atau retur                                               |
+| Versi dependensi       | Ditetapkan                             | Mengikuti rilis terbaru                          | Versi di PRD sudah usang                                                       |
 
 ---
 

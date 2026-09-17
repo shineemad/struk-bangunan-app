@@ -27,15 +27,15 @@ Berlaku untuk semua tugas di rencana ini dan rencana berikutnya.
 
 ## Struktur berkas yang dihasilkan rencana ini
 
-| Berkas | Tanggung jawab |
-|---|---|
-| `lib/domain/uang.dart` | Format dan parse rupiah, format kuantitas |
-| `lib/domain/item_belanja.dart` | Satu baris belanjaan beserta subtotalnya |
-| `lib/domain/transaksi.dart` | Kumpulan item, total, kembalian |
-| `lib/domain/profil_toko.dart` | Identitas toko dan lebar kertas |
-| `lib/domain/receipt/kolom.dart` | Tata letak teks: rata tengah, rata kanan, dua kolom, bungkus kata, baris item C-adaptif |
-| `lib/domain/receipt/receipt_document.dart` | Struk final sebagai daftar baris bergaya |
-| `lib/domain/receipt/receipt_builder.dart` | Menyusun `ReceiptDocument` dari `Transaksi` + `ProfilToko` |
+| Berkas                                     | Tanggung jawab                                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `lib/domain/uang.dart`                     | Format dan parse rupiah, format kuantitas                                               |
+| `lib/domain/item_belanja.dart`             | Satu baris belanjaan beserta subtotalnya                                                |
+| `lib/domain/transaksi.dart`                | Kumpulan item, total, kembalian                                                         |
+| `lib/domain/profil_toko.dart`              | Identitas toko dan lebar kertas                                                         |
+| `lib/domain/receipt/kolom.dart`            | Tata letak teks: rata tengah, rata kanan, dua kolom, bungkus kata, baris item C-adaptif |
+| `lib/domain/receipt/receipt_document.dart` | Struk final sebagai daftar baris bergaya                                                |
+| `lib/domain/receipt/receipt_builder.dart`  | Menyusun `ReceiptDocument` dari `Transaksi` + `ProfilToko`                              |
 
 Rencana 2 akan memakai `ReceiptDocument` untuk ESC/POS, PDF, dan PNG. Rencana 3 membangun UI.
 
@@ -44,11 +44,13 @@ Rencana 2 akan memakai `ReceiptDocument` untuk ESC/POS, PDF, dan PNG. Rencana 3 
 ### Task 1: Kerangka proyek Flutter
 
 **Files:**
+
 - Create: `pubspec.yaml`, `analysis_options.yaml`, `lib/main.dart`, `android/` (dihasilkan `flutter create`)
 - Create: `test/kerangka_test.dart`
 - Delete: `test/widget_test.dart` (bawaan `flutter create`)
 
 **Interfaces:**
+
 - Consumes: —
 - Produces: proyek Flutter bernama `struk_bangunan` dengan `flutter test` yang berjalan hijau.
 
@@ -98,10 +100,12 @@ git commit -m "chore: kerangka proyek Flutter struk_bangunan (Android)"
 ### Task 2: Format uang & kuantitas
 
 **Files:**
+
 - Create: `lib/domain/uang.dart`
 - Test: `test/domain/uang_test.dart`
 
 **Interfaces:**
+
 - Consumes: —
 - Produces:
   - `const int maksRupiah = 999999999;`
@@ -227,10 +231,12 @@ git commit -m "feat(domain): format dan parse rupiah serta kuantitas"
 ### Task 3: Model item belanja
 
 **Files:**
+
 - Create: `lib/domain/item_belanja.dart`
 - Test: `test/domain/item_belanja_test.dart`
 
 **Interfaces:**
+
 - Consumes: `maksRupiah` dari `lib/domain/uang.dart`
 - Produces: kelas `ItemBelanja` dengan properti `String nama`, `double qty`, `String satuan`, `int hargaSatuan`, `int subtotal`, dibuat lewat konstruktor factory bernama parameter.
 
@@ -412,10 +418,12 @@ git commit -m "feat(domain): model ItemBelanja dengan subtotal beku"
 ### Task 4: Model transaksi
 
 **Files:**
+
 - Create: `lib/domain/transaksi.dart`
 - Test: `test/domain/transaksi_test.dart`
 
 **Interfaces:**
+
 - Consumes: `ItemBelanja` dari `lib/domain/item_belanja.dart`
 - Produces: kelas `Transaksi` dengan `String nomorNota`, `DateTime waktu`, `List<ItemBelanja> items`, `int? bayar`, serta getter `int get total` dan `int? get kembali`.
 
@@ -547,10 +555,12 @@ git commit -m "feat(domain): model Transaksi dengan total dan kembalian"
 ### Task 5: Profil toko
 
 **Files:**
+
 - Create: `lib/domain/profil_toko.dart`
 - Test: `test/domain/profil_toko_test.dart`
 
 **Interfaces:**
+
 - Consumes: —
 - Produces: kelas `ProfilToko` dengan `String namaToko`, `String alamat`, `String noHp`, `String catatan`, `String namaKasir`, `int lebarKertas`, serta getter `int get lebarKolom`.
 
@@ -641,10 +651,12 @@ git commit -m "feat(domain): model ProfilToko dan lebar kolom kertas"
 Ini inti rencana. Seluruh aturan perataan struk hidup di sini, dalam bentuk fungsi murni yang hanya menerima dan mengembalikan `String`.
 
 **Files:**
+
 - Create: `lib/domain/receipt/kolom.dart`
 - Test: `test/domain/receipt/kolom_test.dart`
 
 **Interfaces:**
+
 - Consumes: —
 - Produces:
   - `String garisPemisah(int lebar)`
@@ -951,10 +963,12 @@ git commit -m "feat(domain): aturan tata letak kolom C-adaptif"
 ### Task 7: Dokumen struk
 
 **Files:**
+
 - Create: `lib/domain/receipt/receipt_document.dart`
 - Test: `test/domain/receipt/receipt_document_test.dart`
 
 **Interfaces:**
+
 - Consumes: —
 - Produces:
   - `enum GayaBaris { biasa, tebal, pemisah }`
@@ -1051,10 +1065,12 @@ git commit -m "feat(domain): ReceiptDocument sebagai struk final"
 ### Task 8: Penyusun struk
 
 **Files:**
+
 - Create: `lib/domain/receipt/receipt_builder.dart`
 - Test: `test/domain/receipt/receipt_builder_test.dart`
 
 **Interfaces:**
+
 - Consumes: `ProfilToko`, `Transaksi`, `ItemBelanja`, `formatRupiah`, `formatJumlah`, seluruh fungsi `kolom.dart`, `ReceiptDocument`, `BarisStruk`, `GayaBaris`
 - Produces: `ReceiptDocument bangunStruk({required ProfilToko profil, required Transaksi transaksi})`
 
