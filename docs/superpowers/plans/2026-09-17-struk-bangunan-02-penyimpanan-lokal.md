@@ -24,16 +24,16 @@
 
 ## Struktur berkas yang dihasilkan rencana ini
 
-| Berkas | Tanggung jawab |
-|---|---|
-| `lib/data/basisdata.dart` | Membuka basis data, skema, migrasi, dan nomor nota berikutnya |
-| `lib/data/favorit_bawaan.dart` | Daftar bahan bangunan bawaan beserta satuan lazimnya |
-| `lib/data/profil_repository.dart` | Baca/tulis profil toko di `shared_preferences` |
-| `lib/data/draf_repository.dart` | Simpan/pulihkan keranjang yang sedang berjalan |
-| `lib/data/transaksi_repository.dart` | Simpan nota, ambil riwayat, rekap harian |
-| `lib/data/favorit_repository.dart` | Daftar favorit, pembelajaran frekuensi, sembunyikan |
-| `lib/data/backup_service.dart` | Ekspor seluruh data ke JSON dan pulihkan dengan validasi |
-| `test/bantuan_basisdata.dart` | Penyiapan basis data dalam memori untuk pengujian |
+| Berkas                               | Tanggung jawab                                                |
+| ------------------------------------ | ------------------------------------------------------------- |
+| `lib/data/basisdata.dart`            | Membuka basis data, skema, migrasi, dan nomor nota berikutnya |
+| `lib/data/favorit_bawaan.dart`       | Daftar bahan bangunan bawaan beserta satuan lazimnya          |
+| `lib/data/profil_repository.dart`    | Baca/tulis profil toko di `shared_preferences`                |
+| `lib/data/draf_repository.dart`      | Simpan/pulihkan keranjang yang sedang berjalan                |
+| `lib/data/transaksi_repository.dart` | Simpan nota, ambil riwayat, rekap harian                      |
+| `lib/data/favorit_repository.dart`   | Daftar favorit, pembelajaran frekuensi, sembunyikan           |
+| `lib/data/backup_service.dart`       | Ekspor seluruh data ke JSON dan pulihkan dengan validasi      |
+| `test/bantuan_basisdata.dart`        | Penyiapan basis data dalam memori untuk pengujian             |
 
 Rencana 3 akan memakai lapisan ini untuk penyaji keluaran (ESC/POS, PDF, PNG, printer, berbagi). Rencana 4 membangun antarmuka.
 
@@ -42,11 +42,13 @@ Rencana 3 akan memakai lapisan ini untuk penyaji keluaran (ESC/POS, PDF, PNG, pr
 ### Task 1: Dependensi dan harness uji basis data
 
 **Files:**
+
 - Modify: `pubspec.yaml`
 - Create: `test/bantuan_basisdata.dart`
 - Create: `test/data/bantuan_basisdata_test.dart`
 
 **Interfaces:**
+
 - Consumes: —
 - Produces: `Future<Database> bukaBasisdataUji()` yang mengembalikan basis data sqflite dalam memori, dan `sqfliteFfiInit()` sudah terpanggil.
 
@@ -108,16 +110,28 @@ Diharapkan: GAGAL dengan error kompilasi — `bantuan_basisdata.dart` belum ada.
 Buat `test/bantuan_basisdata.dart`:
 
 ```dart
-import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+bool _ffiSiap = false;
 
 /// Basis data sqflite dalam memori untuk pengujian. Memakai FFI sehingga
 /// berjalan di komputer tanpa emulator Android.
 Future<Database> bukaBasisdataUji() async {
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
-  return databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
+  if (!_ffiSiap) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    _ffiSiap = true;
+  }
+  // Tanpa singleInstance: false, semua pemanggilan berbagi satu basis data
+  // `:memory:` yang sama sehingga data antar test saling bocor.
+  return databaseFactoryFfi.openDatabase(
+    inMemoryDatabasePath,
+    options: OpenDatabaseOptions(singleInstance: false),
+  );
 }
 ```
+
+**Dua hal yang tidak boleh diubah oleh tugas berikutnya.** Pustaka publik paket ini bernama `sqflite_ffi.dart`, bukan `sqflite_common_ffi.dart` — impor yang keliru gagal kompilasi. Dan karena `singleInstance: false`, setiap pemanggil memegang koneksinya sendiri dan **wajib menutupnya sendiri** dengan `addTearDown(db.close)`.
 
 - [ ] **Step 5: Jalankan test untuk memastikan lulus**
 
@@ -141,10 +155,12 @@ git commit -m "chore: dependensi penyimpanan dan harness uji basis data"
 ### Task 2: Skema basis data
 
 **Files:**
+
 - Create: `lib/data/basisdata.dart`
 - Test: `test/data/basisdata_test.dart`
 
 **Interfaces:**
+
 - Consumes: `bukaBasisdataUji()` dari `test/bantuan_basisdata.dart`
 - Produces:
   - `const int versiSkema = 1;`
@@ -222,10 +238,14 @@ void main() {
     addTearDown(db.close);
     await siapkanSkema(db);
 
-    final hasil = <String>[];
-    for (var i = 0; i < 50; i++) {
-      hasil.add(await ambilNomorNotaBerikutnya(db));
-    }
+    // Semua pemanggilan dimulai sebelum satu pun ditunggu, sehingga baca dan
+    // tulis pencacah benar-benar berebut. Versi berurutan (await di dalam
+    // loop) tetap lulus meski transaksinya dibuang, jadi ia tidak menguji apa
+    // pun yang namanya sebut.
+    final hasil = await Future.wait([
+      for (var i = 0; i < 50; i++) ambilNomorNotaBerikutnya(db),
+    ]);
+
     expect(hasil.toSet(), hasLength(50));
   });
 
@@ -388,6 +408,8 @@ Future<String> ambilNomorNotaBerikutnya(Database db) async {
 Jalankan: `flutter test test/data/basisdata_test.dart`
 Diharapkan: PASS, 7 test.
 
+**Jebakan untuk Tugas 4, 5, dan 6:** `PRAGMA foreign_keys` berlaku per koneksi, dan `siapkanSkema` sengaja tidak menyalakannya. Aplikasi sungguhan menyalakannya di `onConfigure` milik `bukaBasisdata()`, tetapi basis data uji **tidak**. Artinya `ON DELETE CASCADE` mati di dalam test kecuali test itu menyalakannya sendiri. Jangan mengandalkan cascade di test tanpa menjalankan `PRAGMA foreign_keys = ON` lebih dulu.
+
 - [ ] **Step 5: Gerbang mutu dan commit**
 
 ```bash
@@ -403,12 +425,14 @@ git commit -m "feat(data): skema basis data dan nomor nota berurutan"
 ### Task 3: Profil toko dan draf keranjang
 
 **Files:**
+
 - Create: `lib/data/profil_repository.dart`
 - Create: `lib/data/draf_repository.dart`
 - Test: `test/data/profil_repository_test.dart`
 - Test: `test/data/draf_repository_test.dart`
 
 **Interfaces:**
+
 - Consumes: `ProfilToko` dan `ItemBelanja` dari `lib/domain/`
 - Produces:
   - `class ProfilRepository` dengan `Future<ProfilToko?> muat()` dan `Future<void> simpan(ProfilToko profil)`
@@ -673,11 +697,13 @@ git commit -m "feat(data): penyimpanan profil toko dan draf keranjang"
 ### Task 4: Riwayat transaksi
 
 **Files:**
+
 - Create: `lib/data/transaksi_repository.dart`
 - Test: `test/data/transaksi_repository_test.dart`
 
 **Interfaces:**
-- Consumes: `siapkanSkema`, `ambilNomorNotaBerikutnya` dari `basisdata.dart`; `Transaksi` dan `ItemBelanja` dari domain
+
+- Consumes: `siapkanSkema`, `ambilNomorNotaBerikutnyaDalam` dari `basisdata.dart`; `Transaksi` dan `ItemBelanja` dari domain
 - Produces:
   - `class RekapHarian` dengan `int jumlahNota` dan `int totalRupiah`
   - `class TransaksiRepository(Database db)` dengan:
@@ -692,7 +718,7 @@ Buat `test/data/transaksi_repository_test.dart`:
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:struk_bangunan/data/basisdata.dart';
 import 'package:struk_bangunan/data/transaksi_repository.dart';
 import 'package:struk_bangunan/domain/item_belanja.dart';
@@ -866,8 +892,35 @@ void main() {
     expect(hasil.bayar, isNull);
     expect(hasil.kembali, isNull);
   });
+
+  test('nota yang gagal tersimpan tidak membakar nomor nota', () async {
+    final (db, repo) = await _siap();
+    addTearDown(db.close);
+
+    // Baris ini menyerobot '0001', sehingga penyisipan di dalam simpan()
+    // melanggar UNIQUE dan seluruh transaksinya dibatalkan.
+    await db.insert('transaksi', {
+      'nomor_nota': '0001',
+      'waktu_ms': 1000,
+      'total': 1000,
+    });
+
+    await expectLater(
+      repo.simpan(items: [_item('Semen', 1, 65000)], waktu: DateTime(2026, 9, 17)),
+      throwsA(isA<DatabaseException>()),
+    );
+
+    final baris = await db.query(
+      'meta',
+      where: 'kunci = ?',
+      whereArgs: ['nomor_nota_berikutnya'],
+    );
+    expect(baris.first['nilai'], '1');
+  });
 }
 ```
+
+**Nomor nota dipesan di dalam transaksi, bukan sebelumnya.** Test terakhir itulah penjaganya. Bila `simpan` memanggil `ambilNomorNotaBerikutnya(_db)` lebih dulu — yang membuka transaksinya sendiri dan langsung commit — pencacah sudah naik sebelum barisnya disisipkan, sehingga nota yang gagal meninggalkan lubang permanen di penomoran. Karena itu `simpan` memakai `ambilNomorNotaBerikutnyaDalam(txn)` di dalam transaksi yang sama dengan penyisipannya. Memanggil `ambilNomorNotaBerikutnya(Database)` dari dalam transaksi akan **menggantung selamanya**, bukan gagal.
 
 - [ ] **Step 2: Jalankan test untuk memastikan gagal**
 
@@ -899,20 +952,23 @@ class TransaksiRepository {
 
   /// Menyimpan nota dan mengembalikannya lengkap dengan nomor nota yang baru
   /// dipesan. Nota yang sudah tersimpan tidak pernah diubah lagi.
+  ///
+  /// Nomor dipesan di dalam transaksi yang sama dengan penyisipan barisnya,
+  /// sehingga nota yang gagal tersimpan tidak meninggalkan lubang di
+  /// penomoran.
   Future<Transaksi> simpan({
     required List<ItemBelanja> items,
     required DateTime waktu,
     int? bayar,
-  }) async {
-    final nomorNota = await ambilNomorNotaBerikutnya(_db);
-    final nota = Transaksi(
-      nomorNota: nomorNota,
-      waktu: waktu,
-      items: items,
-      bayar: bayar,
-    );
+  }) {
+    return _db.transaction((txn) async {
+      final nota = Transaksi(
+        nomorNota: await ambilNomorNotaBerikutnyaDalam(txn),
+        waktu: waktu,
+        items: items,
+        bayar: bayar,
+      );
 
-    await _db.transaction((txn) async {
       final id = await txn.insert('transaksi', {
         'nomor_nota': nota.nomorNota,
         'waktu_ms': nota.waktu.millisecondsSinceEpoch,
@@ -933,9 +989,9 @@ class TransaksiRepository {
           'urutan': i,
         });
       }
-    });
 
-    return nota;
+      return nota;
+    });
   }
 
   Future<List<Transaksi>> terbaru({int batas = 50}) async {
@@ -1003,7 +1059,7 @@ class TransaksiRepository {
 - [ ] **Step 4: Jalankan test untuk memastikan lulus**
 
 Jalankan: `flutter test test/data/transaksi_repository_test.dart`
-Diharapkan: PASS, 10 test.
+Diharapkan: PASS, 11 test.
 
 - [ ] **Step 5: Gerbang mutu dan commit**
 
@@ -1022,11 +1078,13 @@ git commit -m "feat(data): riwayat transaksi dan rekap harian"
 ### Task 5: Bahan favorit
 
 **Files:**
+
 - Create: `lib/data/favorit_bawaan.dart`
 - Create: `lib/data/favorit_repository.dart`
 - Test: `test/data/favorit_repository_test.dart`
 
 **Interfaces:**
+
 - Consumes: `siapkanSkema` dari `basisdata.dart`
 - Produces:
   - `class BahanFavorit` dengan `String nama`, `String satuanTerakhir`, `int jumlahPakai`, `bool bawaan`
@@ -1044,7 +1102,7 @@ Buat `test/data/favorit_repository_test.dart`:
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:struk_bangunan/data/basisdata.dart';
 import 'package:struk_bangunan/data/favorit_bawaan.dart';
 import 'package:struk_bangunan/data/favorit_repository.dart';
@@ -1373,10 +1431,12 @@ git commit -m "feat(data): daftar bahan favorit yang belajar dari pemakaian"
 ### Task 6: Cadangkan dan pulihkan
 
 **Files:**
+
 - Create: `lib/data/backup_service.dart`
 - Test: `test/data/backup_service_test.dart`
 
 **Interfaces:**
+
 - Consumes: `siapkanSkema` dari `basisdata.dart`, `ProfilRepository`, `TransaksiRepository`, `FavoritRepository`
 - Produces:
   - `class BackupRusak implements Exception` dengan `String pesan`
@@ -1394,7 +1454,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:struk_bangunan/data/backup_service.dart';
 import 'package:struk_bangunan/data/basisdata.dart';
 import 'package:struk_bangunan/data/favorit_repository.dart';
@@ -1537,19 +1597,19 @@ void main() {
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
-    try {
-      await backup.impor('berkas rusak');
-    } on BackupRusak {
-      // memang diharapkan
-    }
+    await expectLater(
+      backup.impor('berkas rusak'),
+      throwsA(isA<BackupRusak>()),
+    );
 
     expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
     expect((await profil.muat())!.namaToko, 'TB. SINAR BANGUNAN');
   });
 
   test('berkas dengan tipe kolom yang salah ditolak', () async {
-    final (db, backup, _) = await _siap();
+    final (db, backup, profil) = await _siap();
     addTearDown(db.close);
+    await _isiContoh(db, profil);
 
     final rusak = jsonEncode({
       'versi': versiBackup,
@@ -1561,7 +1621,85 @@ void main() {
       ],
     });
 
-    expect(() => backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+
+    // Penolakan ini terjadi di tahap _wajib, bukan di pembacaan JSON, jadi ia
+    // menjaga janji utama layanan ini: validasi selesai penuh sebelum satu
+    // baris pun dihapus.
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await profil.muat())!.namaToko, 'TB. SINAR BANGUNAN');
+  });
+
+  test('baris favorit dengan tipe kolom yang salah ditolak', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '1'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [
+        {
+          'nama': 'Semen',
+          'satuan_terakhir': 'sak',
+          'jumlah_pakai': 'banyak',
+          'terakhir_dipakai_ms': 0,
+          'bawaan': 0,
+          'disembunyikan': 0,
+        },
+      ],
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+  });
+
+  test('profil dengan tipe kolom yang salah ditolak sebelum menimpa', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '1'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [],
+      'profil': {'nama_toko': 'TB. X', 'lebar_kertas': 'delapan puluh'},
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await profil.muat())!.namaToko, 'TB. SINAR BANGUNAN');
+  });
+
+  test('berkas tanpa bagian meta ditolak sebelum menghapus apa pun', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    await expectLater(
+      backup.impor(
+        jsonEncode({
+          'versi': versiBackup,
+          'transaksi': [],
+          'item': [],
+          'favorit': [],
+        }),
+      ),
+      throwsA(isA<BackupRusak>()),
+    );
+
+    // Tanpa penjaga ini impor akan lulus, mengosongkan tabel meta, dan
+    // pencacah nomor nota lenyap bersamanya.
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    final lanjut = await TransaksiRepository(db).simpan(
+      items: [ItemBelanja(nama: 'Paku', qty: 1, satuan: 'kg', hargaSatuan: 1000)],
+      waktu: DateTime(2026, 9, 18),
+    );
+    expect(lanjut.nomorNota, '0002');
   });
 }
 ```
@@ -1628,6 +1766,14 @@ class BackupService {
     final item = _ambilDaftar(data, 'item');
     final favorit = _ambilDaftar(data, 'favorit');
 
+    // Bagian yang hilang boleh dianggap kosong, kecuali `meta`: ia memuat
+    // pencacah nomor nota, dan mengosongkannya membuat nota berikutnya gagal
+    // terbit sama sekali.
+    final meta = data['meta'];
+    if (meta is! Map) {
+      throw const BackupRusak('Berkas cadangan tidak memuat bagian "meta".');
+    }
+
     _wajib(transaksi, {
       'nomor_nota': String,
       'waktu_ms': int,
@@ -1642,7 +1788,20 @@ class BackupService {
       'subtotal': int,
       'urutan': int,
     });
-    _wajib(favorit, {'nama': String});
+    _wajib(favorit, {
+      'nama': String,
+      'satuan_terakhir': String,
+      'jumlah_pakai': int,
+      'terakhir_dipakai_ms': int,
+      'bawaan': int,
+      'disembunyikan': int,
+    });
+
+    // Profil dirakit sebelum transaksi dibuka. Bila dikerjakan setelahnya,
+    // kolom yang bertipe salah meledak sebagai TypeError telanjang setelah
+    // basis data terlanjur ditimpa — galat yang tidak akan tertangkap
+    // pemanggil yang menunggu BackupRusak.
+    final profil = _bacaProfil(data['profil']);
 
     await _db.transaction((txn) async {
       await txn.delete('item');
@@ -1660,20 +1819,16 @@ class BackupService {
         await txn.insert('favorit', Map<String, Object?>.from(baris));
       }
 
-      final meta = data['meta'];
-      if (meta is Map) {
-        for (final entri in meta.entries) {
-          await txn.insert('meta', {
-            'kunci': entri.key.toString(),
-            'nilai': entri.value.toString(),
-          }, conflictAlgorithm: ConflictAlgorithm.replace);
-        }
+      for (final entri in meta.entries) {
+        await txn.insert('meta', {
+          'kunci': entri.key.toString(),
+          'nilai': entri.value.toString(),
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
       }
     });
 
-    final profil = data['profil'];
-    if (profil is Map) {
-      await _profil.simpan(_petaKeProfil(profil));
+    if (profil != null) {
+      await _profil.simpan(profil);
     }
   }
 
@@ -1753,13 +1908,31 @@ class BackupService {
     namaKasir: p['nama_kasir'] as String? ?? '',
     lebarKertas: p['lebar_kertas'] as int? ?? 58,
   );
+
+  /// Null berarti berkas cadangan memang tidak memuat profil — itu sah, dan
+  /// profil yang sekarang dibiarkan apa adanya.
+  ProfilToko? _bacaProfil(Object? data) {
+    if (data == null) return null;
+    if (data is! Map<Object?, Object?>) {
+      throw const BackupRusak('Bagian "profil" pada berkas cadangan rusak.');
+    }
+    try {
+      return _petaKeProfil(data);
+    } on TypeError {
+      // Cast yang gagal diterjemahkan menjadi galat domain, bukan ditelan:
+      // pemanggil menunggu BackupRusak, dan ini masih di sisi validasi.
+      throw const BackupRusak('Bagian "profil" pada berkas cadangan rusak.');
+    }
+  }
 }
 ```
 
 - [ ] **Step 4: Jalankan test untuk memastikan lulus**
 
 Jalankan: `flutter test test/data/backup_service_test.dart`
-Diharapkan: PASS, 9 test.
+Diharapkan: PASS, 12 test.
+
+**Mengapa `meta` wajib ada sementara bagian lain boleh hilang.** `transaksi`, `item`, dan `favorit` yang tidak tercantum masuk akal diartikan "tidak ada isinya". `meta` tidak: ia memuat `nomor_nota_berikutnya`, dan `impor` menghapus tabel itu sebelum menulisinya kembali. Berkas bervesi sah yang kebetulan tidak punya bagian `meta` akan lolos setiap validasi lain, mengosongkan pencacah, lalu membuat penerbitan nota berikutnya melempar `StateError` — kerusakan diam yang baru terasa saat pembeli sudah berdiri di depan meja. Karena itu ketiadaan `meta` ditolak, dan ditolak **sebelum** transaksi penghapusan dibuka.
 
 - [ ] **Step 5: Gerbang mutu dan commit**
 
@@ -1780,6 +1953,54 @@ git commit -m "feat(data): cadangkan dan pulihkan data toko"
 - Tidak ada berkas di `lib/data/` yang mengimpor `package:flutter/*`.
 - Tidak ada berkas di `lib/domain/` yang berubah.
 - Ekspor lalu impor menghasilkan data yang identik, dan berkas cadangan yang cacat tidak pernah merusak data yang sedang dipakai.
+
+## Koreksi dari review akhir seluruh branch
+
+Review menyeluruh setelah keenam tugas selesai menemukan dua lubang integritas data yang hanya
+terlihat bila seluruh lapisan dibaca sekaligus. Keduanya ditutup pada commit
+`fix(data): tutup lubang integritas impor cadangan dari review akhir`, beserta tiga temuan Important.
+Kode di Task 6 di atas mendahului koreksi ini; berkas di `lib/data/` adalah kebenarannya.
+
+- **Penjaga `meta` dipuaskan oleh peta kosong.** `{}` adalah `Map`, jadi ia lolos penjaga
+  `is! Map`. `impor` lalu menghapus tabel `meta` dan tidak menyisipkan apa pun, sehingga pencacah
+  nomor nota lenyap permanen — dan untuk aplikasi luring tanpa jalur pemulihan, itu berarti toko
+  tidak bisa menerbitkan nota sama sekali. Kini `nomor_nota_berikutnya` wajib ada dan wajib terbaca
+  sebagai bilangan `>= 1`.
+- **Cadangan tanpa bagian `item` memulihkan nota menjadi Rp 0 tanpa galat.** Bagian yang hilang
+  diartikan kosong, jadi berkas yang memuat `transaksi` tetapi tidak memuat `item` lolos seluruh
+  validasi dan menyajikan nota Rp 195.000 sebagai Rp 0 di riwayat yang dipakai melayani klaim
+  pembeli. Gerbang impor kini menuntut `id` pada baris `transaksi`, `qty > 0` dan `nama` tidak
+  kosong pada baris `item`, tiap `item.transaksi_id` menunjuk nota yang ikut dipulihkan, dan tiap
+  nota punya sekurangnya satu item.
+- **`PRAGMA foreign_keys` mati di seluruh pengujian** sementara aplikasi sungguhan menyalakannya,
+  sehingga lapisan ini diuji di bawah aturan yang lebih longgar daripada produksi — dan itulah yang
+  menyembunyikan lubang di atas. `bukaBasisdataUji()` kini menyalakannya. Tidak ada satu pun test
+  lama yang gagal karenanya.
+- **Nama kunci profil punya dua sumber kebenaran**, konstanta privat di `ProfilRepository` dan
+  literal yang diketik ulang di `BackupService`. Mengganti satu nama kunci akan membuat cadangan
+  lama diam-diam berhenti memulihkan kolom itu. Konstantanya kini publik dan dipakai bersama.
+- **Batas ukuran berkas cadangan yang diminta spec tidak ada di mana pun.** `impor` kini menolak
+  masukan di atas 16 MiB sebelum `jsonDecode` dipanggil.
+
+### Keputusan yang sengaja tidak dikerjakan di rencana ini
+
+- **`_rakit` menghitung ulang subtotal alih-alih membaca kolom `item.subtotal` yang tersimpan.**
+  Spec bagian 4 menuntut sebaliknya: nota lama yang dicetak ulang harus keluar persis seperti
+  aslinya. Menepatinya menuntut `ItemBelanja` menerima subtotal dari luar — yaitu mengubah
+  `lib/domain/`, yang rencana ini larang. Diwariskan ke Rencana 3 sebagai keputusan tercatat, bukan
+  kelalaian: hari ini kedua nilainya selalu sama karena rumusnya sama, tetapi aturan pembulatan yang
+  berubah akan mengubah nilai seluruh nota lama saat dicetak ulang.
+- **`FavoritRepository.catatPemakaian` tidak punya varian `...Dalam(DatabaseExecutor)`.** Ia membuka
+  transaksinya sendiri, jadi memanggilnya dari dalam transaksi `TransaksiRepository.simpan` akan
+  **menggantung**, bukan gagal — jebakan yang sama persis yang melahirkan
+  `ambilNomorNotaBerikutnyaDalam`. Menambah API tanpa pemanggil adalah rekayasa berlebih, jadi ia
+  diwariskan sebagai larangan tertulis untuk Rencana 4.
+- **`TransaksiRepository.simpan` tidak menolak `items` kosong.** Nota tanpa item bisa tersimpan, dan
+  ekspornya kelak akan ditolak gerbang impor yang baru. Tutup dengan menambahkan invarian
+  "sekurangnya satu item" di sisi penyimpanan, bukan dengan melonggarkan gerbang cadangan.
+- **Cadangan tanpa bagian `profil` membiarkan profil toko yang lama**, padahal `impor` dijanjikan
+  menimpa seluruh data. Membersihkannya menuntut `ProfilRepository.hapus()`, permukaan yang memang
+  milik layar Pengaturan di Rencana 4.
 
 ## Rencana berikutnya
 
