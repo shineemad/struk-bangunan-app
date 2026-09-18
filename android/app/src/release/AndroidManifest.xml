@@ -1,0 +1,26 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Plugin `print_bluetooth_thermal` mendeklarasikan INTERNET dan empat
+         izin Bluetooth di manifest-nya sendiri, dan penggabungan manifest
+         menyuntikkannya ke aplikasi ini. Tanpa penghapusan di bawah, APK
+         rilis meminta INTERNET — melanggar janji spec bagian 4 dan 10 bahwa
+         aplikasi ini tidak bisa menyentuh jaringan sama sekali.
+
+         Penghapusan ditaruh di varian `release` saja supaya build `debug`
+         tetap memegang INTERNET, yang dibutuhkan hot reload.
+
+         Saat fitur cetak thermal dihidupkan kembali, hapus empat baris
+         Bluetooth di bawah dan kembalikan izinnya ke src/main. Baris INTERNET
+         tetap dihapus selamanya. -->
+    <uses-permission android:name="android.permission.INTERNET"
+        tools:node="remove" />
+
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        tools:node="remove" />
+</manifest>

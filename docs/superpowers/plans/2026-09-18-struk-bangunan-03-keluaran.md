@@ -1992,6 +1992,12 @@ Ditulis terus terang supaya tidak ada yang mengira lapisan ini sudah selesai div
 - **Pilihan `PaperSize` di `susunEscPos` belum terbukti berpengaruh pada satu byte pun.** Pada `esc_pos_utils_plus` 2.0.4, lebar kertas hanya dipakai `_text()` di dalam cabang `colWidth != 12`, sedangkan `text()` memanggilnya dengan `colWidth` bawaan 12. Menukar baris itu menjadi konstanta tidak akan menggagalkan satu test pun. Kode ini benar dan berguna bila kelak fitur kolom dipakai — tetapi jangan dikira ia terjaga.
 - **`share_plus` bersandar pada `FileProvider` yang disuntikkan lewat manifest miliknya sendiri saat penggabungan manifest.** Manifest `main` tidak memuat `<provider>` apa pun, dan tidak ada satu pun build Android yang pernah dijalankan di cabang ini untuk memastikan penggabungan itu terjadi. Bila gagal, berbagi berkas melempar `FileUriExposedException` di perangkat nyata — kegagalan yang tidak mungkin ditangkap `flutter test`.
 
+### Terbukti setelah rencana ini digabung (uji di perangkat nyata, 18 Sep 2026)
+
+RMX3710, Android 15: `FileProvider` milik `share_plus` **jalan tanpa konfigurasi tambahan** — share sheet terbuka untuk PNG maupun PDF tanpa `FileUriExposedException`. `fontFamily: 'monospace'` **berlebar tetap** di perangkat itu. Berkas ditulis ke cache privat aplikasi dengan nama yang spec minta, tidak masuk galeri.
+
+Di uji yang sama ditemukan **cacat yang lolos dari seluruh rangkaian review**: `print_bluetooth_thermal` mendeklarasikan `INTERNET` dan empat izin Bluetooth di manifest-nya sendiri, dan penggabungan manifest Android menyuntikkannya ke APK. Test `android_manifest_test.dart` hanya membaca manifest `main`, sehingga ia hijau sementara **APK rilis sungguhan meminta `INTERNET`** — melanggar spec bagian 4 dan 10. Pelajarannya: memeriksa berkas manifest kita sendiri tidak pernah cukup; yang menentukan adalah manifest hasil penggabungan, dan itu hanya terlihat dari build sungguhan (`aapt2 dump permissions`).
+
 Yang **berpindah keluar** dari daftar ini setelah eksekusi:
 
 - Golden `struk_58mm.png` sudah dilihat mata manusia (408×104 piksel): judul terpusat, garis pemisah memenuhi 32 kolom, kolom nominal rata kanan pada baris item dan baris TOTAL, baris tebal tampak lebih tebal.
