@@ -75,23 +75,37 @@ void main() {
   });
 
   group('KolomIsian', () {
-    testWidgets('menampilkan labelnya dan tinggi kolomnya memenuhi lantai', (
-      tester,
-    ) async {
-      final controller = TextEditingController();
+    testWidgets(
+      'label berada di luar kolom dan tetap terlihat setelah kolom terisi, '
+      'tinggi kolomnya memenuhi lantai',
+      (tester) async {
+        final controller = TextEditingController();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: temaTerang(),
-          home: Scaffold(
-            body: KolomIsian(label: 'Nama Barang', controller: controller),
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: temaTerang(),
+            home: Scaffold(
+              body: KolomIsian(label: 'Nama Barang', controller: controller),
+            ),
           ),
-        ),
-      );
+        );
 
-      expect(find.text('Nama Barang'), findsOneWidget);
-      expect(tester.getSize(find.byType(TextField)).height, Ukuran.isian);
-    });
+        expect(find.text('Nama Barang'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(TextField),
+            matching: find.text('Nama Barang'),
+          ),
+          findsNothing,
+        );
+        expect(tester.getSize(find.byType(TextField)).height, Ukuran.isian);
+
+        await tester.enterText(find.byType(TextField), 'Semen');
+        await tester.pump();
+
+        expect(find.text('Nama Barang'), findsOneWidget);
+      },
+    );
   });
 
   group('ChipSatuan', () {

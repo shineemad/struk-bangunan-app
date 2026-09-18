@@ -40,7 +40,9 @@ class ChipSatuan extends StatelessWidget {
               child: Text(
                 satuan,
                 style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                  color: terpilih ? Colors.white : Warna.teks,
+                  color: terpilih
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Warna.teks,
                   fontWeight: terpilih ? FontWeight.w700 : FontWeight.w400,
                 ),
               ),
