@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as dev;
 
 import '../data/pengaturan_keluaran_repository.dart';
 import 'printer_bluetooth.dart';
@@ -40,19 +41,19 @@ class PrinterService {
   /// Tidak pernah melempar. Transaksi sudah tersimpan sebelum fungsi ini
   /// dipanggil, jadi kegagalan cetak tidak boleh sampai menjatuhkan apa pun.
   Future<HasilCetak> cetak(List<int> bytes) async {
-    if (!await _perangkat.izinDiberikan()) {
-      return HasilCetak.izinBelumDiberikan;
-    }
-    if (!await _perangkat.bluetoothMenyala()) {
-      return HasilCetak.bluetoothMati;
-    }
-
-    final pengaturan = await _pengaturan.muat();
-    if (!pengaturan.punyaPrinter) {
-      return HasilCetak.printerBelumDipilih;
-    }
-
     try {
+      if (!await _perangkat.izinDiberikan()) {
+        return HasilCetak.izinBelumDiberikan;
+      }
+      if (!await _perangkat.bluetoothMenyala()) {
+        return HasilCetak.bluetoothMati;
+      }
+
+      final pengaturan = await _pengaturan.muat();
+      if (!pengaturan.punyaPrinter) {
+        return HasilCetak.printerBelumDipilih;
+      }
+
       final tersambung = await _perangkat.sudahTersambung().timeout(batasWaktu);
       if (!tersambung) {
         final berhasil = await _perangkat
@@ -64,6 +65,18 @@ class PrinterService {
       final terkirim = await _perangkat.kirim(bytes).timeout(batasWaktu);
       return terkirim ? HasilCetak.berhasil : HasilCetak.gagalKirim;
     } on TimeoutException {
+      return HasilCetak.tidakMenyahut;
+    } catch (galat, jejak) {
+      // Galat tak terduga (mis. `PlatformException` dari stack Bluetooth
+      // Android) tidak boleh sampai menjatuhkan pemanggil. Dicatat lewat
+      // `dart:developer` (bawaan SDK, tanpa dependensi baru) agar tetap
+      // ada jejak, lalu dilaporkan sebagai kegagalan perangkat biasa.
+      dev.log(
+        'cetak gagal karena galat tak terduga',
+        name: 'PrinterService',
+        error: galat,
+        stackTrace: jejak,
+      );
       return HasilCetak.tidakMenyahut;
     }
   }

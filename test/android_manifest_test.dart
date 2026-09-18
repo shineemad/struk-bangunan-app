@@ -8,6 +8,10 @@ void main() {
       'android/app/src/main/AndroidManifest.xml',
     ).readAsStringSync();
 
+    // Dicocokkan beserta tanda kutip penutup: `contains('...BLUETOOTH')` saja
+    // juga akan lolos untuk `BLUETOOTH_SCAN`/`BLUETOOTH_CONNECT`, sehingga
+    // tidak punya daya menjaga izin telanjangnya.
+    expect(isi, contains('android.permission.BLUETOOTH"'));
     expect(isi, contains('android.permission.BLUETOOTH_CONNECT'));
     expect(isi, contains('android.permission.BLUETOOTH_SCAN'));
     expect(isi, contains('android.permission.BLUETOOTH_ADMIN'));

@@ -16,6 +16,12 @@ class _PrinterPalsu implements PrinterBluetooth {
   bool diamSelamanya = false;
   List<PrinterTerdeteksi> terpasang = const [];
 
+  /// Diisi agar metode terkait melempar galat non-timeout, mis. meniru
+  /// `PlatformException` dari stack Bluetooth Android.
+  Object? galatSaatIzin;
+  Object? galatSaatSambung;
+  Object? galatSaatKirim;
+
   int jumlahSambung = 0;
   List<int>? terkirim;
 
@@ -23,7 +29,10 @@ class _PrinterPalsu implements PrinterBluetooth {
       diamSelamanya ? Completer<T>().future : Future.value(nilai);
 
   @override
-  Future<bool> izinDiberikan() async => izin;
+  Future<bool> izinDiberikan() async {
+    if (galatSaatIzin != null) throw galatSaatIzin!;
+    return izin;
+  }
 
   @override
   Future<bool> bluetoothMenyala() async => menyala;
@@ -37,12 +46,14 @@ class _PrinterPalsu implements PrinterBluetooth {
   @override
   Future<bool> sambung(String mac) {
     jumlahSambung++;
+    if (galatSaatSambung != null) return Future.error(galatSaatSambung!);
     return _jawab(bisaSambung);
   }
 
   @override
   Future<bool> kirim(List<int> bytes) {
     terkirim = bytes;
+    if (galatSaatKirim != null) return Future.error(galatSaatKirim!);
     return _jawab(bisaKirim);
   }
 
@@ -132,6 +143,30 @@ void main() {
     perangkat.bisaKirim = false;
 
     expect(await layanan.cetak([1]), HasilCetak.gagalKirim);
+  });
+
+  test(
+    'galat tak terduga dari izinDiberikan tidak menjatuhkan cetak',
+    () async {
+      final (perangkat, _, layanan) = await _siap();
+      perangkat.galatSaatIzin = Exception('galat perangkat keras');
+
+      expect(await layanan.cetak([1]), HasilCetak.tidakMenyahut);
+    },
+  );
+
+  test('galat tak terduga dari sambung tidak menjatuhkan cetak', () async {
+    final (perangkat, _, layanan) = await _siap();
+    perangkat.galatSaatSambung = Exception('galat perangkat keras');
+
+    expect(await layanan.cetak([1]), HasilCetak.tidakMenyahut);
+  });
+
+  test('galat tak terduga dari kirim tidak menjatuhkan cetak', () async {
+    final (perangkat, _, layanan) = await _siap();
+    perangkat.galatSaatKirim = Exception('galat perangkat keras');
+
+    expect(await layanan.cetak([1]), HasilCetak.tidakMenyahut);
   });
 
   test('memilih printer mengingatnya untuk cetak berikutnya', () async {
