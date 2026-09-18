@@ -14,6 +14,28 @@ Future<BerkasSementara> _folderUji() async {
   return BerkasSementara(Directory(p.join(folder.path, 'struk')));
 }
 
+/// Mencatat urutan pemanggilan metode, lalu meneruskan ke implementasi asli.
+///
+/// Dipakai untuk membuktikan urutan operasi `bagikan`, bukan hanya hasil
+/// akhirnya — asersi hasil akhir saja tidak membuktikan urutan.
+class _BerkasSementaraPencatat extends BerkasSementara {
+  final List<String> urutanPanggilan = [];
+
+  _BerkasSementaraPencatat(super.folder);
+
+  @override
+  Future<int> bersihkanLebihTuaDari(Duration umur, {DateTime? sekarang}) async {
+    urutanPanggilan.add('bersihkan');
+    return super.bersihkanLebihTuaDari(umur, sekarang: sekarang);
+  }
+
+  @override
+  Future<File> tulis(String nama, List<int> isi) async {
+    urutanPanggilan.add('tulis');
+    return super.tulis(nama, isi);
+  }
+}
+
 void main() {
   test('nama berkas struk mengikuti format kiriman', () {
     expect(namaBerkasStruk('0142', FormatKiriman.png), 'struk-0142.png');
@@ -54,16 +76,39 @@ void main() {
     expect(await File(jalurTerkirim!).readAsBytes(), [1, 2, 3]);
   });
 
-  test('membagikan membuang berkas basi lebih dulu', () async {
-    final berkas = await _folderUji();
-    final basi = await berkas.tulis('basi.png', [7]);
-    await basi.setLastModified(
-      DateTime.now().subtract(const Duration(days: 2)),
-    );
+  test(
+    'membagikan mengunci urutan bersihkan-tulis-kirim, bukan cuma hasil akhir',
+    () async {
+      final folder = await Directory.systemTemp.createTemp('struk_berbagi');
+      addTearDown(() async {
+        if (await folder.exists()) await folder.delete(recursive: true);
+      });
+      final target = Directory(p.join(folder.path, 'struk'));
 
-    final layanan = ShareService(berkas, kirim: (_, _) async {});
-    await layanan.bagikan(nama: 'struk-0142.png', isi: [1]);
+      final basi = await BerkasSementara(target).tulis('basi.png', [7]);
+      await basi.setLastModified(
+        DateTime.now().subtract(const Duration(days: 2)),
+      );
 
-    expect(await basi.exists(), isFalse);
-  });
+      final pencatat = _BerkasSementaraPencatat(target);
+      final urutanPenuh = <String>[];
+      final layanan = ShareService(
+        pencatat,
+        kirim: (_, _) async {
+          urutanPenuh.add('kirim');
+        },
+      );
+
+      await layanan.bagikan(nama: 'struk-0142.png', isi: [9, 9]);
+      urutanPenuh.insertAll(0, pencatat.urutanPanggilan);
+
+      expect(pencatat.urutanPanggilan, ['bersihkan', 'tulis']);
+      expect(urutanPenuh, ['bersihkan', 'tulis', 'kirim']);
+      expect(await basi.exists(), isFalse);
+      expect(await File(p.join(target.path, 'struk-0142.png')).readAsBytes(), [
+        9,
+        9,
+      ]);
+    },
+  );
 }
