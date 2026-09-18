@@ -125,4 +125,13 @@ void main() {
     await repo.isiBawaanBilaKosong();
     expect(await repo.daftar(batas: 5), hasLength(5));
   });
+
+  test('nama kosong atau hanya spasi tidak dicatat', () async {
+    final (db, repo) = await _siap();
+    addTearDown(db.close);
+
+    await repo.catatPemakaian('   ', 'sak', DateTime(2026, 9, 17));
+
+    expect(await repo.daftar(), isEmpty);
+  });
 }
