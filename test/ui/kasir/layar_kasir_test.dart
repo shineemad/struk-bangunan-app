@@ -118,6 +118,7 @@ void main() {
 
     expect(_isiKolom(tester, 'kolom-nama'), isEmpty);
     expect(_isiKolom(tester, 'kolom-jumlah'), '1');
+    expect(_isiKolom(tester, 'kolom-harga'), isEmpty);
   });
 
   testWidgets('tombol kurang dan tambah mengubah jumlah', (tester) async {
@@ -220,6 +221,22 @@ void main() {
         isTrue,
         reason: 'kursor pindah ke harga',
       );
+    },
+  );
+
+  testWidgets(
+    'nominal TOTAL terpanjang tidak meluap dan tetap terbaca utuh di ponsel sempit',
+    (tester) async {
+      // _pasang() sudah memasang viewport 360dp lebar (1080px @ 3.0 dpr) —
+      // lebar ponsel Android arus utama, kasus yang diperbaiki fix D7.
+      await _pasang(tester);
+      await _isiForm(tester, jumlah: '1', harga: '999999999');
+
+      await tester.tap(find.byKey(const Key('tombol-tambah')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Rp 999.999.999'), findsOneWidget);
     },
   );
 }
