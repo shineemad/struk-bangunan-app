@@ -225,4 +225,46 @@ void main() {
       );
     },
   );
+
+  testWidgets('dua ketukan dalam satu frame hanya menyimpan satu transaksi', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final db = await bukaBasisdataUji();
+    await siapkanSkema(db);
+    addTearDown(db.close);
+    final prefs = await SharedPreferences.getInstance();
+
+    final keranjang = KeranjangController(
+      draf: DrafRepository(prefs),
+      transaksi: TransaksiRepository(db),
+      favorit: FavoritRepository(db),
+    );
+    await keranjang.tambah(
+      ItemBelanja(nama: 'Semen', qty: 3, satuan: 'sak', hargaSatuan: 65000),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaTerang(),
+        home: LayarPratinjau(
+          profil: const ProfilToko(namaToko: 'TB. SINAR BANGUNAN'),
+          keranjang: keranjang,
+          pengirim: _PengirimPalsu(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Kasir terburu-buru mengetuk tombol yang sama dua kali sebelum frame
+    // berikutnya sempat terjadi: tidak ada `pump` di antara kedua ketukan,
+    // jadi keduanya menghantam pohon widget yang sama (sebelum `_sibuk`
+    // sempat membuat tombol tampak nonaktif di layar).
+    await tester.tap(find.byKey(const Key('tombol-kirim-wa')));
+    await tester.tap(find.byKey(const Key('tombol-kirim-wa')));
+    await tester.pumpAndSettle();
+
+    expect(await db.query('transaksi'), hasLength(1));
+    expect(await TransaksiRepository(db).ambil('0002'), isNull);
+  });
 }

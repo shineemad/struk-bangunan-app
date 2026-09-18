@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/material.dart';
 
 import '../../domain/profil_toko.dart';
@@ -31,6 +33,7 @@ class _LayarPratinjauState extends State<LayarPratinjau> {
   final _bayar = TextEditingController();
   Transaksi? _tersimpan;
   bool _sibuk = false;
+  Future<Transaksi>? _penyimpanan;
 
   @override
   void dispose() {
@@ -47,14 +50,14 @@ class _LayarPratinjauState extends State<LayarPratinjau> {
         bayar: parseRupiah(_bayar.text),
       );
 
-  /// Menyimpan sekali saja. Transaksi wajib sudah ada di basis data sebelum
-  /// berkas dibuat: satu kegagalan berbagi tidak boleh menghapus penjualan.
-  Future<Transaksi> _simpanSekali() async {
-    final sudah = _tersimpan;
-    if (sudah != null) return sudah;
+  /// Menyimpan sekali saja, bahkan bila dua tombol ditekan dalam frame yang
+  /// sama. `??=` berjalan sinkron sebelum `await` pertama, jadi pemanggil
+  /// kedua menunggu Future yang sama alih-alih memulai transaksi kedua.
+  Future<Transaksi> _simpanSekali() => _penyimpanan ??= _mulaiSimpan();
 
+  Future<Transaksi> _mulaiSimpan() async {
     final nota = await widget.keranjang.simpan(bayar: parseRupiah(_bayar.text));
-    setState(() => _tersimpan = nota);
+    if (mounted) setState(() => _tersimpan = nota);
     return nota;
   }
 
@@ -78,7 +81,13 @@ class _LayarPratinjauState extends State<LayarPratinjau> {
         nota: nota,
         lebarKolom: widget.profil.lebarKolom,
       );
-    } catch (_) {
+    } catch (galat, jejak) {
+      dev.log(
+        'kirim gagal karena galat tak terduga',
+        name: 'LayarPratinjau',
+        error: galat,
+        stackTrace: jejak,
+      );
       if (!mounted) return;
       setState(() => _sibuk = false);
       ScaffoldMessenger.of(context).showSnackBar(
