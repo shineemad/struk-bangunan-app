@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'app/wadah.dart';
+import 'state/favorit_controller.dart';
+import 'state/keranjang_controller.dart';
+import 'ui/kasir/layar_kasir.dart';
 import 'ui/tema.dart';
 
 Future<void> main() async {
@@ -19,8 +23,20 @@ class AplikasiStruk extends StatelessWidget {
       title: 'StrukBangunan',
       debugShowCheckedModeBanner: false,
       theme: temaTerang(),
-      home: const Scaffold(
-        body: Center(child: Text('Layar Kasir menyusul di Tugas 6')),
+      home: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => KeranjangController(
+              draf: wadah.draf,
+              transaksi: wadah.transaksi,
+              favorit: wadah.favorit,
+            ),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => FavoritController(wadah.favorit),
+          ),
+        ],
+        child: LayarKasir(onKirim: () {}),
       ),
     );
   }

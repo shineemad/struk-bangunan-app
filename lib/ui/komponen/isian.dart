@@ -56,6 +56,7 @@ class KolomIsian extends StatelessWidget {
   final bool autofocus;
   final List<TextInputFormatter>? formatters;
   final ValueChanged<String>? onChanged;
+  final FocusNode? focusNode;
 
   const KolomIsian({
     super.key,
@@ -66,6 +67,7 @@ class KolomIsian extends StatelessWidget {
     this.autofocus = false,
     this.formatters,
     this.onChanged,
+    this.focusNode,
   });
 
   @override
@@ -82,6 +84,7 @@ class KolomIsian extends StatelessWidget {
           child: TextField(
             controller: controller,
             autofocus: autofocus,
+            focusNode: focusNode,
             onChanged: onChanged,
             style: Theme.of(context).textTheme.bodyLarge,
             keyboardType: angka
