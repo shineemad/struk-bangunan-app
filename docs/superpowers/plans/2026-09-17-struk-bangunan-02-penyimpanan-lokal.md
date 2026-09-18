@@ -1597,19 +1597,19 @@ void main() {
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
-    try {
-      await backup.impor('berkas rusak');
-    } on BackupRusak {
-      // memang diharapkan
-    }
+    await expectLater(
+      backup.impor('berkas rusak'),
+      throwsA(isA<BackupRusak>()),
+    );
 
     expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
     expect((await profil.muat())!.namaToko, 'TB. SINAR BANGUNAN');
   });
 
   test('berkas dengan tipe kolom yang salah ditolak', () async {
-    final (db, backup, _) = await _siap();
+    final (db, backup, profil) = await _siap();
     addTearDown(db.close);
+    await _isiContoh(db, profil);
 
     final rusak = jsonEncode({
       'versi': versiBackup,
@@ -1621,7 +1621,58 @@ void main() {
       ],
     });
 
-    expect(() => backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+
+    // Penolakan ini terjadi di tahap _wajib, bukan di pembacaan JSON, jadi ia
+    // menjaga janji utama layanan ini: validasi selesai penuh sebelum satu
+    // baris pun dihapus.
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await profil.muat())!.namaToko, 'TB. SINAR BANGUNAN');
+  });
+
+  test('baris favorit dengan tipe kolom yang salah ditolak', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '1'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [
+        {
+          'nama': 'Semen',
+          'satuan_terakhir': 'sak',
+          'jumlah_pakai': 'banyak',
+          'terakhir_dipakai_ms': 0,
+          'bawaan': 0,
+          'disembunyikan': 0,
+        },
+      ],
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+  });
+
+  test('profil dengan tipe kolom yang salah ditolak sebelum menimpa', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '1'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [],
+      'profil': {'nama_toko': 'TB. X', 'lebar_kertas': 'delapan puluh'},
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await profil.muat())!.namaToko, 'TB. SINAR BANGUNAN');
   });
 
   test('berkas tanpa bagian meta ditolak sebelum menghapus apa pun', () async {
@@ -1737,7 +1788,20 @@ class BackupService {
       'subtotal': int,
       'urutan': int,
     });
-    _wajib(favorit, {'nama': String});
+    _wajib(favorit, {
+      'nama': String,
+      'satuan_terakhir': String,
+      'jumlah_pakai': int,
+      'terakhir_dipakai_ms': int,
+      'bawaan': int,
+      'disembunyikan': int,
+    });
+
+    // Profil dirakit sebelum transaksi dibuka. Bila dikerjakan setelahnya,
+    // kolom yang bertipe salah meledak sebagai TypeError telanjang setelah
+    // basis data terlanjur ditimpa — galat yang tidak akan tertangkap
+    // pemanggil yang menunggu BackupRusak.
+    final profil = _bacaProfil(data['profil']);
 
     await _db.transaction((txn) async {
       await txn.delete('item');
@@ -1763,9 +1827,8 @@ class BackupService {
       }
     });
 
-    final profil = data['profil'];
-    if (profil is Map) {
-      await _profil.simpan(_petaKeProfil(profil));
+    if (profil != null) {
+      await _profil.simpan(profil);
     }
   }
 
@@ -1845,13 +1908,29 @@ class BackupService {
     namaKasir: p['nama_kasir'] as String? ?? '',
     lebarKertas: p['lebar_kertas'] as int? ?? 58,
   );
+
+  /// Null berarti berkas cadangan memang tidak memuat profil — itu sah, dan
+  /// profil yang sekarang dibiarkan apa adanya.
+  ProfilToko? _bacaProfil(Object? data) {
+    if (data == null) return null;
+    if (data is! Map<Object?, Object?>) {
+      throw const BackupRusak('Bagian "profil" pada berkas cadangan rusak.');
+    }
+    try {
+      return _petaKeProfil(data);
+    } on TypeError {
+      // Cast yang gagal diterjemahkan menjadi galat domain, bukan ditelan:
+      // pemanggil menunggu BackupRusak, dan ini masih di sisi validasi.
+      throw const BackupRusak('Bagian "profil" pada berkas cadangan rusak.');
+    }
+  }
 }
 ```
 
 - [ ] **Step 4: Jalankan test untuk memastikan lulus**
 
 Jalankan: `flutter test test/data/backup_service_test.dart`
-Diharapkan: PASS, 10 test.
+Diharapkan: PASS, 12 test.
 
 **Mengapa `meta` wajib ada sementara bagian lain boleh hilang.** `transaksi`, `item`, dan `favorit` yang tidak tercantum masuk akal diartikan "tidak ada isinya". `meta` tidak: ia memuat `nomor_nota_berikutnya`, dan `impor` menghapus tabel itu sebelum menulisinya kembali. Berkas bervesi sah yang kebetulan tidak punya bagian `meta` akan lolos setiap validasi lain, mengosongkan pencacah, lalu membuat penerbitan nota berikutnya melempar `StateError` — kerusakan diam yang baru terasa saat pembeli sudah berdiri di depan meja. Karena itu ketiadaan `meta` ditolak, dan ditolak **sebelum** transaksi penghapusan dibuka.
 
