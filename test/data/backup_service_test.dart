@@ -253,4 +253,128 @@ void main() {
     );
     expect(lanjut.nomorNota, '0002');
   });
+
+  test('bagian meta kosong ditolak', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {},
+      'transaksi': [],
+      'item': [],
+      'favorit': [],
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+  });
+
+  test('pencacah nomor nota yang bukan angka ditolak', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': 'abc'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [],
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+  });
+
+  test('nota tanpa item ditolak', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '2'},
+      'transaksi': [
+        {'id': 1, 'nomor_nota': '0001', 'waktu_ms': 0, 'total': 10000},
+      ],
+      'item': [],
+      'favorit': [],
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+  });
+
+  test('item yang menunjuk nota tak dikenal ditolak', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '2'},
+      'transaksi': [
+        {'id': 1, 'nomor_nota': '0001', 'waktu_ms': 0, 'total': 10000},
+      ],
+      'item': [
+        {
+          'transaksi_id': 99,
+          'nama': 'Semen',
+          'qty': 1,
+          'satuan': 'sak',
+          'harga_satuan': 10000,
+          'subtotal': 10000,
+          'urutan': 0,
+        },
+      ],
+      'favorit': [],
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+  });
+
+  test('item dengan kuantitas nol ditolak', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '2'},
+      'transaksi': [
+        {'id': 1, 'nomor_nota': '0001', 'waktu_ms': 0, 'total': 10000},
+      ],
+      'item': [
+        {
+          'transaksi_id': 1,
+          'nama': 'Semen',
+          'qty': 0,
+          'satuan': 'sak',
+          'harga_satuan': 10000,
+          'subtotal': 0,
+          'urutan': 0,
+        },
+      ],
+      'favorit': [],
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+  });
+
+  test('berkas cadangan yang terlalu besar ditolak', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    // Dibangun tanpa benar-benar menyusun JSON bermakna sebesar itu — hanya
+    // untuk melewati batas ukuran sebelum jsonDecode sempat dipanggil.
+    final rusak = 'x' * (16 * 1024 * 1024 + 1);
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+  });
 }

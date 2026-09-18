@@ -7,6 +7,11 @@ import 'profil_repository.dart';
 
 const int versiBackup = 1;
 
+/// Batas ukuran berkas cadangan: 16 MiB dalam kode-unit, sesuai spec bagian 4
+/// (berkas berasal dari luar aplikasi, jadi ukurannya harus dibatasi sebelum
+/// diuraikan).
+const int _batasUkuranBerkasCadangan = 16 * 1024 * 1024;
+
 class BackupRusak implements Exception {
   final String pesan;
 
@@ -45,6 +50,12 @@ class BackupService {
   /// Validasi selesai sepenuhnya sebelum satu baris pun dihapus, sehingga
   /// berkas yang cacat tidak pernah merusak data yang sedang dipakai.
   Future<void> impor(String teks) async {
+    if (teks.length > _batasUkuranBerkasCadangan) {
+      throw const BackupRusak(
+        'Berkas cadangan melebihi batas ukuran yang diizinkan.',
+      );
+    }
+
     final data = _bacaJson(teks);
     final transaksi = _ambilDaftar(data, 'transaksi');
     final item = _ambilDaftar(data, 'item');
@@ -57,8 +68,21 @@ class BackupService {
     if (meta is! Map) {
       throw const BackupRusak('Berkas cadangan tidak memuat bagian "meta".');
     }
+    final nomorNotaBerikutnya = int.tryParse(
+      meta['nomor_nota_berikutnya']?.toString() ?? '',
+    );
+    if (nomorNotaBerikutnya == null || nomorNotaBerikutnya < 1) {
+      throw const BackupRusak(
+        'Berkas cadangan tidak memuat pencacah nomor nota yang sah.',
+      );
+    }
 
-    _wajib(transaksi, {'nomor_nota': String, 'waktu_ms': int, 'total': int});
+    _wajib(transaksi, {
+      'id': int,
+      'nomor_nota': String,
+      'waktu_ms': int,
+      'total': int,
+    });
     _wajib(item, {
       'transaksi_id': int,
       'nama': String,
@@ -76,6 +100,8 @@ class BackupService {
       'bawaan': int,
       'disembunyikan': int,
     });
+    _wajibItemSah(item);
+    _wajibSetiapTransaksiPunyaItem(transaksi, item);
 
     // Profil dirakit sebelum transaksi dibuka. Bila dikerjakan setelahnya,
     // kolom yang bertipe salah meledak sebagai TypeError telanjang setelah
@@ -171,22 +197,70 @@ class BackupService {
     }
   }
 
+  /// Menegakkan invarian yang dituntut konstruktor [ItemBelanja] (kuantitas
+  /// positif, nama tidak kosong) sebelum baris masuk transaksi, sehingga
+  /// baris yang melanggarnya ditolak sebagai satu galat alih-alih menjatuhkan
+  /// seluruh daftar riwayat saat dirakit ulang.
+  void _wajibItemSah(List<Map<Object?, Object?>> item) {
+    for (final b in item) {
+      final qty = b['qty'] as num;
+      if (qty <= 0) {
+        throw const BackupRusak(
+          'Kolom "qty" pada berkas cadangan harus lebih besar dari nol.',
+        );
+      }
+      final nama = b['nama'] as String;
+      if (nama.trim().isEmpty) {
+        throw const BackupRusak(
+          'Kolom "nama" pada berkas cadangan tidak boleh kosong.',
+        );
+      }
+    }
+  }
+
+  /// Menegakkan bahwa setiap `item.transaksi_id` menunjuk nota yang benar-benar
+  /// ikut dipulihkan, dan setiap nota punya sekurangnya satu barang — tanpa
+  /// ini nota bisa pulih dengan total Rp 0 secara diam-diam.
+  void _wajibSetiapTransaksiPunyaItem(
+    List<Map<Object?, Object?>> transaksi,
+    List<Map<Object?, Object?>> item,
+  ) {
+    final idTransaksi = transaksi.map((b) => b['id'] as int).toSet();
+    final idPunyaItem = <int>{};
+    for (final b in item) {
+      final transaksiId = b['transaksi_id'] as int;
+      if (!idTransaksi.contains(transaksiId)) {
+        throw const BackupRusak(
+          'Ada baris "item" yang menunjuk nota yang tidak ada di berkas cadangan.',
+        );
+      }
+      idPunyaItem.add(transaksiId);
+    }
+    for (final id in idTransaksi) {
+      if (!idPunyaItem.contains(id)) {
+        throw const BackupRusak(
+          'Ada nota pada berkas cadangan yang tidak punya satu pun barang.',
+        );
+      }
+    }
+  }
+
   Map<String, Object?> _profilKePeta(ProfilToko p) => {
-    'nama_toko': p.namaToko,
-    'alamat_toko': p.alamat,
-    'nohp_toko': p.noHp,
-    'catatan_toko': p.catatan,
-    'nama_kasir': p.namaKasir,
-    'lebar_kertas': p.lebarKertas,
+    ProfilRepository.kunciNama: p.namaToko,
+    ProfilRepository.kunciAlamat: p.alamat,
+    ProfilRepository.kunciNoHp: p.noHp,
+    ProfilRepository.kunciCatatan: p.catatan,
+    ProfilRepository.kunciKasir: p.namaKasir,
+    ProfilRepository.kunciLebar: p.lebarKertas,
   };
 
   ProfilToko _petaKeProfil(Map<Object?, Object?> p) => ProfilToko(
-    namaToko: p['nama_toko'] as String? ?? '',
-    alamat: p['alamat_toko'] as String? ?? '',
-    noHp: p['nohp_toko'] as String? ?? '',
-    catatan: p['catatan_toko'] as String? ?? '',
-    namaKasir: p['nama_kasir'] as String? ?? '',
-    lebarKertas: p['lebar_kertas'] as int? ?? 58,
+    namaToko: p[ProfilRepository.kunciNama] as String? ?? '',
+    alamat: p[ProfilRepository.kunciAlamat] as String? ?? '',
+    noHp: p[ProfilRepository.kunciNoHp] as String? ?? '',
+    catatan: p[ProfilRepository.kunciCatatan] as String? ?? '',
+    namaKasir: p[ProfilRepository.kunciKasir] as String? ?? '',
+    lebarKertas: p[ProfilRepository.kunciLebar] as int? ?? 58,
   );
 
   /// Null berarti berkas cadangan memang tidak memuat profil — itu sah, dan

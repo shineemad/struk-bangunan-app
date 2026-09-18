@@ -12,8 +12,12 @@ Future<Database> bukaBasisdataUji() async {
   }
   // Tanpa singleInstance: false, semua pemanggilan berbagi satu basis data
   // `:memory:` yang sama sehingga data antar test saling bocor.
-  return databaseFactoryFfi.openDatabase(
+  final db = await databaseFactoryFfi.openDatabase(
     inMemoryDatabasePath,
     options: OpenDatabaseOptions(singleInstance: false),
   );
+  // Menyamai bukaBasisdata() (jalur aplikasi): PRAGMA ini per-koneksi, jadi
+  // tanpa ini test berjalan di bawah aturan yang lebih longgar dari produksi.
+  await db.execute('PRAGMA foreign_keys = ON');
+  return db;
 }
