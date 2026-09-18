@@ -2,22 +2,42 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+/// Izin yang disuntikkan `print_bluetooth_thermal` lewat manifest-nya sendiri,
+/// sehingga hanya bisa dicabut dari sisi kita.
+const _izinDariPlugin = [
+  'android.permission.INTERNET',
+  'android.permission.BLUETOOTH',
+  'android.permission.BLUETOOTH_ADMIN',
+  'android.permission.BLUETOOTH_CONNECT',
+  'android.permission.BLUETOOTH_SCAN',
+];
+
+String _baca(String jalur) => File(jalur).readAsStringSync();
+
 void main() {
-  test('manifest rilis memuat izin Bluetooth dan tidak memuat INTERNET', () {
-    final isi = File(
-      'android/app/src/main/AndroidManifest.xml',
-    ).readAsStringSync();
+  test('manifest main tidak meminta izin apa pun', () {
+    // Fitur cetak ditunda, jadi tidak ada satu pun izin yang punya pemakai.
+    expect(
+      _baca('android/app/src/main/AndroidManifest.xml'),
+      isNot(contains('uses-permission')),
+    );
+  });
 
-    // Dicocokkan beserta tanda kutip penutup: `contains('...BLUETOOTH')` saja
-    // juga akan lolos untuk `BLUETOOTH_SCAN`/`BLUETOOTH_CONNECT`, sehingga
-    // tidak punya daya menjaga izin telanjangnya.
-    expect(isi, contains('android.permission.BLUETOOTH"'));
-    expect(isi, contains('android.permission.BLUETOOTH_CONNECT'));
-    expect(isi, contains('android.permission.BLUETOOTH_SCAN'));
-    expect(isi, contains('android.permission.BLUETOOTH_ADMIN'));
-    expect(isi, contains('android.permission.ACCESS_FINE_LOCATION'));
+  test('manifest rilis mencabut setiap izin suntikan plugin', () {
+    // Manifest `main` yang bersih tidak cukup: penggabungan manifest Android
+    // menambahkan izin milik plugin ke APK, dan itu sempat membuat APK rilis
+    // meminta INTERNET padahal spec bagian 4 dan 10 menjanjikan sebaliknya.
+    final isi = _baca('android/app/src/release/AndroidManifest.xml');
 
-    // Seluruh janji "berjalan tanpa internet" bersandar pada baris ini.
-    expect(isi, isNot(contains('android.permission.INTERNET')));
+    for (final izin in _izinDariPlugin) {
+      final pola = RegExp(
+        'android:name="${RegExp.escape(izin)}"\\s+tools:node="remove"',
+      );
+      expect(
+        pola.hasMatch(isi),
+        isTrue,
+        reason: 'izin $izin tidak dicabut di manifest rilis',
+      );
+    }
   });
 }
