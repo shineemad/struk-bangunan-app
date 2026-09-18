@@ -26,7 +26,15 @@ class TransaksiRepository {
     required List<ItemBelanja> items,
     required DateTime waktu,
     int? bayar,
-  }) {
+  }) async {
+    if (items.isEmpty) {
+      throw ArgumentError.value(
+        items,
+        'items',
+        'Nota harus punya sekurangnya satu item',
+      );
+    }
+
     return _db.transaction((txn) async {
       final nota = Transaksi(
         nomorNota: await ambilNomorNotaBerikutnyaDalam(txn),

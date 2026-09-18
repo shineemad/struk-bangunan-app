@@ -9,13 +9,26 @@ const String _namaBerkas = 'strukbangunan.db';
 /// menyuntikkan basis data dalam memori lalu memanggil [siapkanSkema].
 Future<Database> bukaBasisdata() async {
   final folder = await getDatabasesPath();
-  return openDatabase(
+  return databaseFactory.openDatabase(
     p.join(folder, _namaBerkas),
-    version: versiSkema,
-    onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
-    onCreate: (db, _) => siapkanSkema(db),
+    options: opsiBasisdata(),
   );
 }
+
+/// Opsi pembukaan milik aplikasi, dipisah agar uji migrasi bisa membukanya
+/// di berkas sementara tanpa plugin jalur.
+///
+/// [onUpgrade] memanggil [siapkanSkema] karena seluruh pernyataannya memakai
+/// `IF NOT EXISTS`: migrasi yang hanya menambah tabel atau indeks selesai
+/// sendiri. Migrasi yang mengubah atau membuang kolom **tidak** tertangani di
+/// sini dan wajib menulis langkahnya sendiri sebelum `versiSkema` dinaikkan.
+OpenDatabaseOptions opsiBasisdata({int versi = versiSkema}) =>
+    OpenDatabaseOptions(
+      version: versi,
+      onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
+      onCreate: (db, _) => siapkanSkema(db),
+      onUpgrade: (db, _, _) => siapkanSkema(db),
+    );
 
 /// Membuat tabel bila belum ada. Aman dijalankan berulang kali.
 Future<void> siapkanSkema(Database db) async {
