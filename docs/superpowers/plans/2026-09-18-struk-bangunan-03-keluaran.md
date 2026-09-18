@@ -578,7 +578,9 @@ Agar pembantu di atas bisa memakainya, `formatDariNama` pada `pengaturan_keluara
 - [ ] **Step 8: Jalankan test untuk memastikan lulus**
 
 Jalankan: `flutter test test/data/backup_service_test.dart test/data/pengaturan_keluaran_repository_test.dart`
-Diharapkan: PASS, 21 test.
+Diharapkan: PASS, 25 test (21 di `backup_service_test.dart` + 4 di `pengaturan_keluaran_repository_test.dart`).
+
+**Koreksi saat eksekusi:** ketiga test di atas hanya menguji jalur bahagia. Penjaga tipe di `_bacaPengaturan` (bagian `pengaturan` bukan Map; kolom bukan `String`) wajib punya test sendiri — tanpa itu kedua `throw` bisa dihapus dan seluruh suite tetap hijau, padahal justru itu kode yang menangani berkas dari luar aplikasi. Dua test tambahan ditulis mengikuti pola `profil dengan tipe kolom yang salah ditolak sebelum menimpa`.
 
 **Catatan untuk pengulas:** penjaga versi yang sudah ada menolak `versi > versiBackup` dan menerima yang lebih kecil, sehingga menaikkan `versiBackup` ke 2 secara otomatis membuat berkas versi 1 tetap diterima. Test `cadangan versi 1 tetap bisa dipulihkan` adalah penjaganya; tanpa itu, perilaku ini hanya kebetulan yang tidak terkunci.
 
@@ -1261,6 +1263,10 @@ Diharapkan: PASS, 3 test.
 
 Bila test ketiga gagal karena `pw.MemoryImage` melempar sesuatu yang bukan `Exception` (misalnya `Error`), **laporkan tipe sebenarnya** dan sesuaikan matcher-nya ke tipe itu — jangan melonggarkannya menjadi `throwsA(anything)`, yang akan lulus terhadap apa pun termasuk berhasil.
 
+**Koreksi saat eksekusi:** tipe sebenarnya adalah `RangeError`, dilempar dari penciuman format milik `package:image` di dalam `pw.MemoryImage`; matcher menjadi `throwsA(isA<RangeError>())`.
+
+**Koreksi saat eksekusi:** test `kertas 80mm menghasilkan halaman lebih lebar` di atas **tidak punya daya** — ia hanya menegaskan `isNotEmpty` pada kedua PDF dan membandingkan `lebarHalamanPdf` yang merupakan fungsi murni, sehingga `susunPdf` yang mengabaikan `lebarKolom` tetap meloloskannya. Test diperkuat: lebar halaman diurai dari `/MediaBox` pada byte PDF yang dihasilkan, lalu dicocokkan dengan `lebarHalamanPdf(32)` dan `lebarHalamanPdf(48)`.
+
 - [ ] **Step 5: Gerbang mutu dan commit**
 
 ```bash
@@ -1632,6 +1638,8 @@ class PrinterService {
 }
 ```
 
+**Koreksi saat eksekusi:** kode `cetak` di atas **melanggar janji doc-comment-nya sendiri**. Ketiga pemeriksaan awal (`izinDiberikan`, `bluetoothMenyala`, `_pengaturan.muat()`) berada di luar `try`, dan penangkap di dalamnya hanya `on TimeoutException` — galat non-timeout (mis. `PlatformException` dari stack Bluetooth Android) naik mentah ke pemanggil, padahal spec bagian 7 menuntut transaksi yang sudah tersimpan tidak boleh dijatuhkan oleh kegagalan cetak. Perbaikannya: seluruh badan `cetak` masuk ke dalam satu `try`, dengan `catch` umum setelah `on TimeoutException` yang mengembalikan `HasilCetak.tidakMenyahut` dan mencatat jejaknya lewat `dart:developer`. Test khusus mengunci kontrak ini untuk galat dari `izinDiberikan`, `sambung`, dan `kirim`.
+
 - [ ] **Step 6: Tambahkan izin Bluetooth ke manifest**
 
 Di `android/app/src/main/AndroidManifest.xml`, sisipkan tepat di bawah baris `<manifest ...>` dan di atas `<application ...>`:
@@ -1831,6 +1839,8 @@ void main() {
 }
 ```
 
+**Koreksi saat eksekusi:** test `membagikan membuang berkas basi lebih dulu` **tidak membuktikan urutannya** — berkas basi tetap terhapus baik `bersihkanLebihTuaDari` dijalankan sebelum maupun sesudah `tulis`, sehingga penukaran urutan di `bagikan` tidak akan tertangkap. Test diganti dengan `membagikan mengunci urutan bersihkan-tulis-kirim, bukan cuma hasil akhir`, memakai subkelas pencatat `BerkasSementara` yang meng-override kedua metode, memanggil `super`, dan menegaskan urutan panggilannya persis.
+
 - [ ] **Step 3: Jalankan kedua test untuk memastikan gagal**
 
 Jalankan: `flutter test test/output/berkas_sementara_test.dart test/output/share_service_test.dart`
@@ -1978,6 +1988,12 @@ Ditulis terus terang supaya tidak ada yang mengira lapisan ini sudah selesai div
 - **`fontFamily: 'monospace'` belum pernah diuji di perangkat Android nyata.** Bila ada perangkat yang memetakannya ke font berlebar tidak tetap, seluruh perataan kolom di PNG dan PDF meleset, sementara struk kertas tetap benar.
 - **Share sheet belum pernah dibuka.** `ShareService._lewatShareSheet` dan `berkasSementaraCache()` keduanya murni penerusan ke plugin dan tidak punya test.
 - **Alur izin Bluetooth belum pernah dijalankan.** Entri manifest ada, tetapi permintaan izin dan penolakan permanen adalah UI milik Rencana 4.
+
+Yang **berpindah keluar** dari daftar ini setelah eksekusi:
+
+- Golden `struk_58mm.png` sudah dilihat mata manusia (408×104 piksel): judul terpusat, garis pemisah memenuhi 32 kolom, kolom nominal rata kanan pada baris item dan baris TOTAL, baris tebal tampak lebih tebal.
+- Lebar halaman PDF 58mm versus 80mm kini benar-benar terbukti dari byte PDF yang dihasilkan, bukan dari fungsi pembantunya.
+- `PrinterService.cetak` kini terbukti tidak melempar bahkan saat perangkat melempar galat non-timeout.
 
 ## Rencana berikutnya
 
