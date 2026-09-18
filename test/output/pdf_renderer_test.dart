@@ -7,6 +7,14 @@ import 'package:struk_bangunan/output/pdf_renderer.dart';
 import 'package:struk_bangunan/output/png_renderer.dart';
 import 'package:struk_bangunan/output/receipt_widget.dart';
 
+// Menguraikan lebar (poin) dari kamus halaman PDF, mis. "/MediaBox[0 0 161 15]" -> 161.
+double? _lebarMediaBoxDari(Uint8List pdf) {
+  final cocok = RegExp(
+    r'/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+[\d.]+\s*\]',
+  ).firstMatch(String.fromCharCodes(pdf));
+  return cocok == null ? null : double.parse(cocok.group(1)!);
+}
+
 Future<Uint8List> _pngContoh(WidgetTester tester) async {
   final kunci = GlobalKey();
   await tester.pumpWidget(
@@ -55,9 +63,14 @@ void main() {
       lebar = await susunPdf(png: png, lebarKolom: 48);
     });
 
-    expect(lebarHalamanPdf(32), lessThan(lebarHalamanPdf(48)));
-    expect(sempit, isNotEmpty);
-    expect(lebar, isNotEmpty);
+    final lebarSempit = _lebarMediaBoxDari(sempit);
+    final lebarLebar = _lebarMediaBoxDari(lebar);
+
+    expect(lebarSempit, isNotNull);
+    expect(lebarLebar, isNotNull);
+    expect(lebarSempit!, closeTo(lebarHalamanPdf(32), 0.01));
+    expect(lebarLebar!, closeTo(lebarHalamanPdf(48), 0.01));
+    expect(lebarLebar, greaterThan(lebarSempit));
   });
 
   testWidgets('byte yang bukan gambar ditolak', (tester) async {
