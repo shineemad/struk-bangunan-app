@@ -29,21 +29,21 @@
 
 Empat cacat terburuk Rencana 2 lahir dari API yang ditulis dari ingatan, bukan diperiksa. Fakta di bawah **sudah dijalankan** sebelum rencana ini ditulis. Percayai fakta ini; jangan menebak yang lain.
 
-| Fakta | Bukti |
-| --- | --- |
-| `PrintBluetoothThermal` seluruhnya **statis** — tidak ada konstruktor, tidak bisa di-mock | dibaca dari `print_bluetooth_thermal-1.2.1/lib/print_bluetooth_thermal.dart` |
-| `BluetoothInfo` punya field `name` dan **`macAdress`** — salah eja bawaan paket, satu huruf `d` | berkas yang sama |
-| `CapabilityProfile.load()` **async** dan membaca aset lewat `rootBundle` | `capability_profile.dart` memanggil `rootBundle.loadString('packages/esc_pos_utils_plus/resources/capabilities.json')` |
-| `CapabilityProfile.load()` **berhasil** di bawah `flutter test` setelah `TestWidgetsFlutterBinding.ensureInitialized()` | probe dijalankan, exit 0 |
-| `Generator.text()` dengan argumen bawaan **tidak** membungkus atau meratakan ulang teks | jejak byte probe: `ESC @`, `ESC $ 0 0`, `ESC E 1`, `FS .`, `HALO`, `LF` — baris 32 karakter keluar utuh 32 byte |
-| `PaperSize.mm58`, `PaperSize.mm72`, `PaperSize.mm80` | `esc_pos_utils_plus/lib/src/enums.dart` |
-| `share_plus` 13: `SharePlus.instance.share(ShareParams(files: [XFile(path)], text: ...))` | `share_plus.dart` + `share_plus_platform.dart` |
-| `pdf` 3.12: `PdfPageFormat.roll57` / `roll80` ada; tingginya `double.infinity` | `page_format.dart` |
-| `PdfPageFormat.copyWith` **tidak punya** `marginAll` — hanya `marginLeft/Top/Right/Bottom` | probe pertama gagal kompilasi karenanya |
-| Font base-14 `Font.courier()` **mencetak peringatan** `Courier has no Unicode support` ke keluaran test dan tidak menjamin karakter non-ASCII | probe dijalankan, peringatannya terlihat |
-| `RepaintBoundary.toImage()` → `toByteData(format: png)` **berhasil** di `testWidgets`, tetapi **wajib** dibungkus `tester.runAsync()` | probe dijalankan, exit 0, PNG 3354 byte |
-| `pw.MemoryImage(png)` menyediakan `.width` dan `.height`, dan `pw.Image` di dalam `pw.Page` menghasilkan PDF tanpa peringatan apa pun | probe dijalankan, `%PDF-1.5`, 4722 byte, keluaran bersih |
-| Byte ajaib PNG = `[137, 80, 78, 71]`; PDF diawali `%PDF-` | probe yang sama |
+| Fakta                                                                                                                                         | Bukti                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `PrintBluetoothThermal` seluruhnya **statis** — tidak ada konstruktor, tidak bisa di-mock                                                     | dibaca dari `print_bluetooth_thermal-1.2.1/lib/print_bluetooth_thermal.dart`                                           |
+| `BluetoothInfo` punya field `name` dan **`macAdress`** — salah eja bawaan paket, satu huruf `d`                                               | berkas yang sama                                                                                                       |
+| `CapabilityProfile.load()` **async** dan membaca aset lewat `rootBundle`                                                                      | `capability_profile.dart` memanggil `rootBundle.loadString('packages/esc_pos_utils_plus/resources/capabilities.json')` |
+| `CapabilityProfile.load()` **berhasil** di bawah `flutter test` setelah `TestWidgetsFlutterBinding.ensureInitialized()`                       | probe dijalankan, exit 0                                                                                               |
+| `Generator.text()` dengan argumen bawaan **tidak** membungkus atau meratakan ulang teks                                                       | jejak byte probe: `ESC @`, `ESC $ 0 0`, `ESC E 1`, `FS .`, `HALO`, `LF` — baris 32 karakter keluar utuh 32 byte        |
+| `PaperSize.mm58`, `PaperSize.mm72`, `PaperSize.mm80`                                                                                          | `esc_pos_utils_plus/lib/src/enums.dart`                                                                                |
+| `share_plus` 13: `SharePlus.instance.share(ShareParams(files: [XFile(path)], text: ...))`                                                     | `share_plus.dart` + `share_plus_platform.dart`                                                                         |
+| `pdf` 3.12: `PdfPageFormat.roll57` / `roll80` ada; tingginya `double.infinity`                                                                | `page_format.dart`                                                                                                     |
+| `PdfPageFormat.copyWith` **tidak punya** `marginAll` — hanya `marginLeft/Top/Right/Bottom`                                                    | probe pertama gagal kompilasi karenanya                                                                                |
+| Font base-14 `Font.courier()` **mencetak peringatan** `Courier has no Unicode support` ke keluaran test dan tidak menjamin karakter non-ASCII | probe dijalankan, peringatannya terlihat                                                                               |
+| `RepaintBoundary.toImage()` → `toByteData(format: png)` **berhasil** di `testWidgets`, tetapi **wajib** dibungkus `tester.runAsync()`         | probe dijalankan, exit 0, PNG 3354 byte                                                                                |
+| `pw.MemoryImage(png)` menyediakan `.width` dan `.height`, dan `pw.Image` di dalam `pw.Page` menghasilkan PDF tanpa peringatan apa pun         | probe dijalankan, `%PDF-1.5`, 4722 byte, keluaran bersih                                                               |
+| Byte ajaib PNG = `[137, 80, 78, 71]`; PDF diawali `%PDF-`                                                                                     | probe yang sama                                                                                                        |
 
 ## Keputusan yang saya ambil saat menulis rencana ini
 
@@ -58,17 +58,17 @@ Partner manusia tidak tersedia saat rencana ini disusun. Setiap keputusan di baw
 
 ## Struktur berkas yang dihasilkan rencana ini
 
-| Berkas | Tanggung jawab |
-| --- | --- |
-| `lib/data/pengaturan_keluaran_repository.dart` | Format kiriman dan printer terakhir di `shared_preferences` |
-| `lib/output/esc_pos_renderer.dart` | `ReceiptDocument` → `List<int>` perintah ESC/POS |
-| `lib/output/receipt_widget.dart` | `ReceiptDocument` → widget, untuk pratinjau sekaligus sumber PNG |
-| `lib/output/png_renderer.dart` | `RepaintBoundary` → byte PNG |
-| `lib/output/pdf_renderer.dart` | byte PNG → byte PDF satu halaman |
-| `lib/output/printer_bluetooth.dart` | Antarmuka perangkat + pembungkus API statis plugin |
-| `lib/output/printer_service.dart` | Pindai, sambung, kirim, batas waktu, ingat printer terakhir |
-| `lib/output/berkas_sementara.dart` | Tulis berkas cache dan buang yang sudah basi |
-| `lib/output/share_service.dart` | Nama berkas dan share sheet |
+| Berkas                                         | Tanggung jawab                                                   |
+| ---------------------------------------------- | ---------------------------------------------------------------- |
+| `lib/data/pengaturan_keluaran_repository.dart` | Format kiriman dan printer terakhir di `shared_preferences`      |
+| `lib/output/esc_pos_renderer.dart`             | `ReceiptDocument` → `List<int>` perintah ESC/POS                 |
+| `lib/output/receipt_widget.dart`               | `ReceiptDocument` → widget, untuk pratinjau sekaligus sumber PNG |
+| `lib/output/png_renderer.dart`                 | `RepaintBoundary` → byte PNG                                     |
+| `lib/output/pdf_renderer.dart`                 | byte PNG → byte PDF satu halaman                                 |
+| `lib/output/printer_bluetooth.dart`            | Antarmuka perangkat + pembungkus API statis plugin               |
+| `lib/output/printer_service.dart`              | Pindai, sambung, kirim, batas waktu, ingat printer terakhir      |
+| `lib/output/berkas_sementara.dart`             | Tulis berkas cache dan buang yang sudah basi                     |
+| `lib/output/share_service.dart`                | Nama berkas dan share sheet                                      |
 
 Berkas yang **diubah**: `lib/data/basisdata.dart`, `lib/data/transaksi_repository.dart`, `lib/data/backup_service.dart`, `android/app/src/main/AndroidManifest.xml`, `pubspec.yaml`.
 
@@ -1993,5 +1993,3 @@ Diteruskan dari Rencana 2 dan dari review akhirnya, ditambah yang lahir di sini:
 - **Gradle wrapper ter-gitignore**, sehingga build tidak bisa direproduksi dari klon bersih. Milik checklist rilis.
 - **Build rilis masih ditandatangani kunci debug**, dan `pubspec.yaml` `description`, `README.md`, serta `lib/main.dart` masih bawaan `flutter create`.
 - **`cupertino_icons` adalah dependensi mati** — buang saat tugas UI.
-
-
