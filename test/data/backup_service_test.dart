@@ -444,4 +444,48 @@ void main() {
     expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
     expect((await pengaturan.muat()).formatKiriman, FormatKiriman.pdf);
   });
+
+  test('pengaturan yang bukan map ditolak sebelum menimpa', () async {
+    final (db, backup, profil, pengaturan) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+    await pengaturan.simpan(
+      const PengaturanKeluaran(formatKiriman: FormatKiriman.pdf),
+    );
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '1'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [],
+      'pengaturan': 'bukan map',
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await pengaturan.muat()).formatKiriman, FormatKiriman.pdf);
+  });
+
+  test('kolom pengaturan dengan tipe salah ditolak sebelum menimpa', () async {
+    final (db, backup, profil, pengaturan) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+    await pengaturan.simpan(
+      const PengaturanKeluaran(formatKiriman: FormatKiriman.pdf),
+    );
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '1'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [],
+      'pengaturan': {'format_kiriman': 123},
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await pengaturan.muat()).formatKiriman, FormatKiriman.pdf);
+  });
 }
