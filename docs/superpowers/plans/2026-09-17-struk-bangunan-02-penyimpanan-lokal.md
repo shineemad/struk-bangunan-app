@@ -1623,6 +1623,33 @@ void main() {
 
     expect(() => backup.impor(rusak), throwsA(isA<BackupRusak>()));
   });
+
+  test('berkas tanpa bagian meta ditolak sebelum menghapus apa pun', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    await expectLater(
+      backup.impor(
+        jsonEncode({
+          'versi': versiBackup,
+          'transaksi': [],
+          'item': [],
+          'favorit': [],
+        }),
+      ),
+      throwsA(isA<BackupRusak>()),
+    );
+
+    // Tanpa penjaga ini impor akan lulus, mengosongkan tabel meta, dan
+    // pencacah nomor nota lenyap bersamanya.
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    final lanjut = await TransaksiRepository(db).simpan(
+      items: [ItemBelanja(nama: 'Paku', qty: 1, satuan: 'kg', hargaSatuan: 1000)],
+      waktu: DateTime(2026, 9, 18),
+    );
+    expect(lanjut.nomorNota, '0002');
+  });
 }
 ```
 
@@ -1688,6 +1715,14 @@ class BackupService {
     final item = _ambilDaftar(data, 'item');
     final favorit = _ambilDaftar(data, 'favorit');
 
+    // Bagian yang hilang boleh dianggap kosong, kecuali `meta`: ia memuat
+    // pencacah nomor nota, dan mengosongkannya membuat nota berikutnya gagal
+    // terbit sama sekali.
+    final meta = data['meta'];
+    if (meta is! Map) {
+      throw const BackupRusak('Berkas cadangan tidak memuat bagian "meta".');
+    }
+
     _wajib(transaksi, {
       'nomor_nota': String,
       'waktu_ms': int,
@@ -1720,14 +1755,11 @@ class BackupService {
         await txn.insert('favorit', Map<String, Object?>.from(baris));
       }
 
-      final meta = data['meta'];
-      if (meta is Map) {
-        for (final entri in meta.entries) {
-          await txn.insert('meta', {
-            'kunci': entri.key.toString(),
-            'nilai': entri.value.toString(),
-          }, conflictAlgorithm: ConflictAlgorithm.replace);
-        }
+      for (final entri in meta.entries) {
+        await txn.insert('meta', {
+          'kunci': entri.key.toString(),
+          'nilai': entri.value.toString(),
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
       }
     });
 
@@ -1819,7 +1851,9 @@ class BackupService {
 - [ ] **Step 4: Jalankan test untuk memastikan lulus**
 
 Jalankan: `flutter test test/data/backup_service_test.dart`
-Diharapkan: PASS, 9 test.
+Diharapkan: PASS, 10 test.
+
+**Mengapa `meta` wajib ada sementara bagian lain boleh hilang.** `transaksi`, `item`, dan `favorit` yang tidak tercantum masuk akal diartikan "tidak ada isinya". `meta` tidak: ia memuat `nomor_nota_berikutnya`, dan `impor` menghapus tabel itu sebelum menulisinya kembali. Berkas bervesi sah yang kebetulan tidak punya bagian `meta` akan lolos setiap validasi lain, mengosongkan pencacah, lalu membuat penerbitan nota berikutnya melempar `StateError` — kerusakan diam yang baru terasa saat pembeli sudah berdiri di depan meja. Karena itu ketiadaan `meta` ditolak, dan ditolak **sebelum** transaksi penghapusan dibuka.
 
 - [ ] **Step 5: Gerbang mutu dan commit**
 
