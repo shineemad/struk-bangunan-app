@@ -68,7 +68,20 @@ class BackupService {
       'subtotal': int,
       'urutan': int,
     });
-    _wajib(favorit, {'nama': String});
+    _wajib(favorit, {
+      'nama': String,
+      'satuan_terakhir': String,
+      'jumlah_pakai': int,
+      'terakhir_dipakai_ms': int,
+      'bawaan': int,
+      'disembunyikan': int,
+    });
+
+    // Profil dirakit sebelum transaksi dibuka. Bila dikerjakan setelahnya,
+    // kolom yang bertipe salah meledak sebagai TypeError telanjang setelah
+    // basis data terlanjur ditimpa — galat yang tidak akan tertangkap
+    // pemanggil yang menunggu BackupRusak.
+    final profil = _bacaProfil(data['profil']);
 
     await _db.transaction((txn) async {
       await txn.delete('item');
@@ -94,9 +107,8 @@ class BackupService {
       }
     });
 
-    final profil = data['profil'];
-    if (profil is Map) {
-      await _profil.simpan(_petaKeProfil(profil));
+    if (profil != null) {
+      await _profil.simpan(profil);
     }
   }
 
@@ -176,4 +188,20 @@ class BackupService {
     namaKasir: p['nama_kasir'] as String? ?? '',
     lebarKertas: p['lebar_kertas'] as int? ?? 58,
   );
+
+  /// Null berarti berkas cadangan memang tidak memuat profil — itu sah, dan
+  /// profil yang sekarang dibiarkan apa adanya.
+  ProfilToko? _bacaProfil(Object? data) {
+    if (data == null) return null;
+    if (data is! Map<Object?, Object?>) {
+      throw const BackupRusak('Bagian "profil" pada berkas cadangan rusak.');
+    }
+    try {
+      return _petaKeProfil(data);
+    } on TypeError {
+      // Cast yang gagal diterjemahkan menjadi galat domain, bukan ditelan:
+      // pemanggil menunggu BackupRusak, dan ini masih di sisi validasi.
+      throw const BackupRusak('Bagian "profil" pada berkas cadangan rusak.');
+    }
+  }
 }

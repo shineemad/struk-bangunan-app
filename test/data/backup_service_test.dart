@@ -147,19 +147,19 @@ void main() {
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
-    try {
-      await backup.impor('berkas rusak');
-    } on BackupRusak {
-      // memang diharapkan
-    }
+    await expectLater(
+      backup.impor('berkas rusak'),
+      throwsA(isA<BackupRusak>()),
+    );
 
     expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
     expect((await profil.muat())!.namaToko, 'TB. SINAR BANGUNAN');
   });
 
   test('berkas dengan tipe kolom yang salah ditolak', () async {
-    final (db, backup, _) = await _siap();
+    final (db, backup, profil) = await _siap();
     addTearDown(db.close);
+    await _isiContoh(db, profil);
 
     final rusak = jsonEncode({
       'versi': versiBackup,
@@ -171,7 +171,58 @@ void main() {
       ],
     });
 
-    expect(() => backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+
+    // Penolakan ini terjadi di tahap _wajib, bukan di pembacaan JSON, jadi ia
+    // menjaga janji utama layanan ini: validasi selesai penuh sebelum satu
+    // baris pun dihapus.
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await profil.muat())!.namaToko, 'TB. SINAR BANGUNAN');
+  });
+
+  test('baris favorit dengan tipe kolom yang salah ditolak', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '1'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [
+        {
+          'nama': 'Semen',
+          'satuan_terakhir': 'sak',
+          'jumlah_pakai': 'banyak',
+          'terakhir_dipakai_ms': 0,
+          'bawaan': 0,
+          'disembunyikan': 0,
+        },
+      ],
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+  });
+
+  test('profil dengan tipe kolom yang salah ditolak sebelum menimpa', () async {
+    final (db, backup, profil) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '1'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [],
+      'profil': {'nama_toko': 'TB. X', 'lebar_kertas': 'delapan puluh'},
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await profil.muat())!.namaToko, 'TB. SINAR BANGUNAN');
   });
 
   test('berkas tanpa bagian meta ditolak sebelum menghapus apa pun', () async {
