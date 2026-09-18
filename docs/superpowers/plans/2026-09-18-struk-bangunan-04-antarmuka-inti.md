@@ -45,31 +45,31 @@ Rencana 4 semula berbunyi "Antarmuka & Rilis" — itu lima layar, pengelolaan st
 
 ## Fakta yang sudah diverifikasi — percayai, jangan tebak ulang
 
-| Fakta                                                                                                               | Sumber                                          |
-| ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `ItemBelanja({required nama, required qty, required satuan, required hargaSatuan})` — `subtotal` dihitung di dalam   | inventaris kode 18 Sep 2026                     |
-| `ItemBelanja` melempar `ArgumentError` untuk nama kosong, `qty <= 0`, harga negatif, dan harga > `maksRupiah`        | guard di `item_belanja.dart`                    |
-| `maksRupiah = 999999999`; `formatRupiah(int)`, `parseRupiah(String) -> int?`, `formatJumlah(double)`                 | `uang.dart`                                     |
-| `Transaksi({required nomorNota, required waktu, required items, bayar})`, punya `total` dan `kembali`                | `transaksi.dart`                                |
-| `bangunStruk({required ProfilToko profil, required Transaksi transaksi}) -> ReceiptDocument`                         | `receipt_builder.dart`                          |
-| `ProfilToko.lebarKolom` hanya pernah bernilai 32 atau 48                                                             | `profil_toko.dart`                              |
-| `TransaksiRepository.simpan({required items, required waktu, int? bayar})` **membuka transaksinya sendiri**          | inventaris kode                                 |
-| `FavoritRepository.catatPemakaian(nama, satuan, waktu)` **membuka transaksinya sendiri, tanpa varian `...Dalam`**    | inventaris kode                                 |
-| `FavoritRepository.daftar({int batas = 40}) -> List<BahanFavorit>`; `BahanFavorit` punya `nama`, `satuanTerakhir`, `jumlahPakai`, `bawaan` | inventaris kode          |
-| `DrafRepository.muat()`, `.simpan(List<ItemBelanja>)`, `.hapus()` — menelan data rusak diam-diam                     | inventaris kode                                 |
-| `ambilPng(GlobalKey, {double pixelRatio = 3})` melempar `StateError` bila kunci tidak menunjuk `RepaintBoundary`     | `png_renderer.dart`                             |
-| Di dalam `testWidgets`, `ambilPng` **wajib** dibungkus `tester.runAsync()`                                           | probe Rencana 3                                 |
-| `ShareService(BerkasSementara, {PengirimBerkas? kirim})`, `bagikan({required nama, required isi, String? teks})`     | `share_service.dart`                            |
-| `namaBerkasStruk(nomorNota, FormatKiriman) -> 'struk-0142.png'`                                                      | `share_service.dart`                            |
-| `susunPdf({required Uint8List png, required int lebarKolom})`                                                        | `pdf_renderer.dart`                             |
-| `bukaBasisdataUji()` di `test/bantuan_basisdata.dart` membuka `singleInstance: false` + `PRAGMA foreign_keys = ON`   | Rencana 2                                       |
-| Setiap test yang membuka basis data wajib `addTearDown(db.close)`                                                    | Rencana 2                                       |
+| Fakta                                                                                                                                                                     | Sumber                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `ItemBelanja({required nama, required qty, required satuan, required hargaSatuan})` — `subtotal` dihitung di dalam                                                        | inventaris kode 18 Sep 2026             |
+| `ItemBelanja` melempar `ArgumentError` untuk nama kosong, `qty <= 0`, harga negatif, dan harga > `maksRupiah`                                                             | guard di `item_belanja.dart`            |
+| `maksRupiah = 999999999`; `formatRupiah(int)`, `parseRupiah(String) -> int?`, `formatJumlah(double)`                                                                      | `uang.dart`                             |
+| `Transaksi({required nomorNota, required waktu, required items, bayar})`, punya `total` dan `kembali`                                                                     | `transaksi.dart`                        |
+| `bangunStruk({required ProfilToko profil, required Transaksi transaksi}) -> ReceiptDocument`                                                                              | `receipt_builder.dart`                  |
+| `ProfilToko.lebarKolom` hanya pernah bernilai 32 atau 48                                                                                                                  | `profil_toko.dart`                      |
+| `TransaksiRepository.simpan({required items, required waktu, int? bayar})` **membuka transaksinya sendiri**                                                               | inventaris kode                         |
+| `FavoritRepository.catatPemakaian(nama, satuan, waktu)` **membuka transaksinya sendiri, tanpa varian `...Dalam`**                                                         | inventaris kode                         |
+| `FavoritRepository.daftar({int batas = 40}) -> List<BahanFavorit>`; `BahanFavorit` punya `nama`, `satuanTerakhir`, `jumlahPakai`, `bawaan`                                | inventaris kode                         |
+| `DrafRepository.muat()`, `.simpan(List<ItemBelanja>)`, `.hapus()` — menelan data rusak diam-diam                                                                          | inventaris kode                         |
+| `ambilPng(GlobalKey, {double pixelRatio = 3})` melempar `StateError` bila kunci tidak menunjuk `RepaintBoundary`                                                          | `png_renderer.dart`                     |
+| Di dalam `testWidgets`, `ambilPng` **wajib** dibungkus `tester.runAsync()`                                                                                                | probe Rencana 3                         |
+| `ShareService(BerkasSementara, {PengirimBerkas? kirim})`, `bagikan({required nama, required isi, String? teks})`                                                          | `share_service.dart`                    |
+| `namaBerkasStruk(nomorNota, FormatKiriman) -> 'struk-0142.png'`                                                                                                           | `share_service.dart`                    |
+| `susunPdf({required Uint8List png, required int lebarKolom})`                                                                                                             | `pdf_renderer.dart`                     |
+| `bukaBasisdataUji()` di `test/bantuan_basisdata.dart` membuka `singleInstance: false` + `PRAGMA foreign_keys = ON`                                                        | Rencana 2                               |
+| Setiap test yang membuka basis data wajib `addTearDown(db.close)`                                                                                                         | Rencana 2                               |
 | Palet: latar `#F8FAFC`, kartu `#FFFFFF`, isian `#EAEFF3`, garis `#E2E8F0`, teks `#0F172A`, sekunder `#475569`, aksen `#2563EB`, merusak `#DC2626`, hijau tambah `#15803D` | `design-system/strukbangunan/MASTER.md` |
 
 ## Struktur berkas yang dihasilkan rencana ini
 
-| Berkas                                | Tanggung jawab                                                     |
-| ------------------------------------- | ------------------------------------------------------------------ |
+| Berkas                                | Tanggung jawab                                                      |
+| ------------------------------------- | ------------------------------------------------------------------- |
 | `lib/ui/tema.dart`                    | Token warna dan ukuran dari design system, dirakit jadi `ThemeData` |
 | `lib/app/wadah.dart`                  | Membuka basis data dan prefs sekali, merakit seluruh repository     |
 | `lib/state/keranjang_controller.dart` | Keranjang berjalan, draf otomatis, dan penyimpanan transaksi        |
