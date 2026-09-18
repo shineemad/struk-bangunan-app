@@ -1954,6 +1954,54 @@ git commit -m "feat(data): cadangkan dan pulihkan data toko"
 - Tidak ada berkas di `lib/domain/` yang berubah.
 - Ekspor lalu impor menghasilkan data yang identik, dan berkas cadangan yang cacat tidak pernah merusak data yang sedang dipakai.
 
+## Koreksi dari review akhir seluruh branch
+
+Review menyeluruh setelah keenam tugas selesai menemukan dua lubang integritas data yang hanya
+terlihat bila seluruh lapisan dibaca sekaligus. Keduanya ditutup pada commit
+`fix(data): tutup lubang integritas impor cadangan dari review akhir`, beserta tiga temuan Important.
+Kode di Task 6 di atas mendahului koreksi ini; berkas di `lib/data/` adalah kebenarannya.
+
+- **Penjaga `meta` dipuaskan oleh peta kosong.** `{}` adalah `Map`, jadi ia lolos penjaga
+  `is! Map`. `impor` lalu menghapus tabel `meta` dan tidak menyisipkan apa pun, sehingga pencacah
+  nomor nota lenyap permanen — dan untuk aplikasi luring tanpa jalur pemulihan, itu berarti toko
+  tidak bisa menerbitkan nota sama sekali. Kini `nomor_nota_berikutnya` wajib ada dan wajib terbaca
+  sebagai bilangan `>= 1`.
+- **Cadangan tanpa bagian `item` memulihkan nota menjadi Rp 0 tanpa galat.** Bagian yang hilang
+  diartikan kosong, jadi berkas yang memuat `transaksi` tetapi tidak memuat `item` lolos seluruh
+  validasi dan menyajikan nota Rp 195.000 sebagai Rp 0 di riwayat yang dipakai melayani klaim
+  pembeli. Gerbang impor kini menuntut `id` pada baris `transaksi`, `qty > 0` dan `nama` tidak
+  kosong pada baris `item`, tiap `item.transaksi_id` menunjuk nota yang ikut dipulihkan, dan tiap
+  nota punya sekurangnya satu item.
+- **`PRAGMA foreign_keys` mati di seluruh pengujian** sementara aplikasi sungguhan menyalakannya,
+  sehingga lapisan ini diuji di bawah aturan yang lebih longgar daripada produksi — dan itulah yang
+  menyembunyikan lubang di atas. `bukaBasisdataUji()` kini menyalakannya. Tidak ada satu pun test
+  lama yang gagal karenanya.
+- **Nama kunci profil punya dua sumber kebenaran**, konstanta privat di `ProfilRepository` dan
+  literal yang diketik ulang di `BackupService`. Mengganti satu nama kunci akan membuat cadangan
+  lama diam-diam berhenti memulihkan kolom itu. Konstantanya kini publik dan dipakai bersama.
+- **Batas ukuran berkas cadangan yang diminta spec tidak ada di mana pun.** `impor` kini menolak
+  masukan di atas 16 MiB sebelum `jsonDecode` dipanggil.
+
+### Keputusan yang sengaja tidak dikerjakan di rencana ini
+
+- **`_rakit` menghitung ulang subtotal alih-alih membaca kolom `item.subtotal` yang tersimpan.**
+  Spec bagian 4 menuntut sebaliknya: nota lama yang dicetak ulang harus keluar persis seperti
+  aslinya. Menepatinya menuntut `ItemBelanja` menerima subtotal dari luar — yaitu mengubah
+  `lib/domain/`, yang rencana ini larang. Diwariskan ke Rencana 3 sebagai keputusan tercatat, bukan
+  kelalaian: hari ini kedua nilainya selalu sama karena rumusnya sama, tetapi aturan pembulatan yang
+  berubah akan mengubah nilai seluruh nota lama saat dicetak ulang.
+- **`FavoritRepository.catatPemakaian` tidak punya varian `...Dalam(DatabaseExecutor)`.** Ia membuka
+  transaksinya sendiri, jadi memanggilnya dari dalam transaksi `TransaksiRepository.simpan` akan
+  **menggantung**, bukan gagal — jebakan yang sama persis yang melahirkan
+  `ambilNomorNotaBerikutnyaDalam`. Menambah API tanpa pemanggil adalah rekayasa berlebih, jadi ia
+  diwariskan sebagai larangan tertulis untuk Rencana 4.
+- **`TransaksiRepository.simpan` tidak menolak `items` kosong.** Nota tanpa item bisa tersimpan, dan
+  ekspornya kelak akan ditolak gerbang impor yang baru. Tutup dengan menambahkan invarian
+  "sekurangnya satu item" di sisi penyimpanan, bukan dengan melonggarkan gerbang cadangan.
+- **Cadangan tanpa bagian `profil` membiarkan profil toko yang lama**, padahal `impor` dijanjikan
+  menimpa seluruh data. Membersihkannya menuntut `ProfilRepository.hapus()`, permukaan yang memang
+  milik layar Pengaturan di Rencana 4.
+
 ## Rencana berikutnya
 
 - **Rencana 3 — Keluaran:** `output/` (ESC/POS, PDF, PNG lewat `RepaintBoundary`, layanan printer Bluetooth, berbagi).
