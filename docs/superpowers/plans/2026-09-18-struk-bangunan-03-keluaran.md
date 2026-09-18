@@ -174,7 +174,10 @@ Di `lib/data/basisdata.dart`, ganti `bukaBasisdata()` yang sekarang dengan:
 /// menyuntikkan basis data dalam memori lalu memanggil [siapkanSkema].
 Future<Database> bukaBasisdata() async {
   final folder = await getDatabasesPath();
-  return openDatabase(p.join(folder, _namaBerkas), options: opsiBasisdata());
+  return databaseFactory.openDatabase(
+    p.join(folder, _namaBerkas),
+    options: opsiBasisdata(),
+  );
 }
 
 /// Opsi pembukaan milik aplikasi, dipisah agar uji migrasi bisa membukanya
@@ -193,7 +196,9 @@ OpenDatabaseOptions opsiBasisdata({int versi = versiSkema}) =>
     );
 ```
 
-Pastikan `openDatabase` yang dipakai adalah bentuk `openDatabase(path, options: ...)`; impor `package:sqflite/sqflite.dart` yang sudah ada sudah menyediakannya.
+Bentuk `options:` hanya tersedia pada `databaseFactory.openDatabase`, bukan pada fungsi tingkat atas `openDatabase` — keduanya sudah disediakan impor `package:sqflite/sqflite.dart` yang ada, jadi tidak ada impor baru.
+
+Penjaga `items.isEmpty` pada Step 5 melempar sebelum satu pun `await`, jadi `simpan` **wajib** ditandai `async`. Tanpa itu `ArgumentError` naik secara sinkron ke pemanggil alih-alih menolak `Future` yang dikembalikan, dan `expectLater(..., throwsArgumentError)` pada Step 2 tidak akan menangkapnya.
 
 - [ ] **Step 5: Tolak nota tanpa item**
 
