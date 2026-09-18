@@ -2448,6 +2448,9 @@ git push origin rencana-4-antarmuka
 - **Subtotal kecil di bawah kolom harga belum ditampilkan** (spec bagian 5: supaya salah ketik nol ketahuan sebelum item masuk daftar).
 - **Menekan baris item untuk mengubah jumlah dan harga belum ada;** sekarang baru bisa menghapus lalu menambah ulang.
 - **Tombol Cetak belum muncul di layar Pratinjau** karena fitur cetak ditunda. Lapisan printernya sudah ada dan teruji.
+- **Label tombol `'KIRIM & CETAK STRUK'` dari spec bagian 5 diganti sementara menjadi `'BUAT STRUK'`** karena fitur cetak ditunda; kembalikan ke teks spec saat cetak dihidupkan lagi.
+- **`KeranjangController.simpan()` masih mengosongkan keranjang di dalam dirinya**, sedangkan spec bagian 5 menuntut "keranjang tidak pernah dikosongkan diam-diam". Tombol TRANSAKSI BARU menutup jalan buntunya, tetapi akar masalahnya belum disentuh.
+- **`Future` yang ditolak tersimpan permanen di `_penyimpanan` pada `LayarPratinjau`:** penyimpanan yang gagal membekukan layar tanpa pesan, karena `_simpanSekali()` dipanggil di luar blok `try`.
 
 ## Rencana berikutnya
 
