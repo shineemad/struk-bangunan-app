@@ -138,6 +138,7 @@ class _LayarKasirState extends State<LayarKasir> {
                     _TombolJumlah(
                       key: const Key('jumlah-kurang'),
                       ikon: Icons.remove,
+                      label: 'Kurangi jumlah',
                       onTekan: () => _ubahJumlah(-1),
                     ),
                     const SizedBox(width: 8),
@@ -154,6 +155,7 @@ class _LayarKasirState extends State<LayarKasir> {
                     _TombolJumlah(
                       key: const Key('jumlah-tambah'),
                       ikon: Icons.add,
+                      label: 'Tambah jumlah',
                       onTekan: () => _ubahJumlah(1),
                     ),
                   ],
@@ -252,7 +254,7 @@ class _LayarKasirState extends State<LayarKasir> {
                   FilledButton(
                     key: const Key('tombol-kirim'),
                     onPressed: keranjang.kosong ? null : widget.onKirim,
-                    child: const Text('KIRIM & CETAK STRUK'),
+                    child: const Text('BUAT STRUK'),
                   ),
                 ],
               ),
@@ -267,14 +269,21 @@ class _LayarKasirState extends State<LayarKasir> {
 /// bukan ukuran ikonnya.
 class _TombolJumlah extends StatelessWidget {
   final IconData ikon;
+  final String label;
   final VoidCallback onTekan;
 
-  const _TombolJumlah({super.key, required this.ikon, required this.onTekan});
+  const _TombolJumlah({
+    super.key,
+    required this.ikon,
+    required this.label,
+    required this.onTekan,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 0),
+    return Semantics(
+      button: true,
+      label: label,
       child: SizedBox(
         width: Ukuran.tombol,
         height: Ukuran.isian,

@@ -153,6 +153,14 @@ class _LayarPratinjauState extends State<LayarPratinjau> {
             ),
             child: const Text('SIMPAN SAJA'),
           ),
+          if (_tersimpan != null) ...[
+            const SizedBox(height: 12),
+            FilledButton(
+              key: const Key('tombol-transaksi-baru'),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('TRANSAKSI BARU'),
+            ),
+          ],
         ],
       ),
     );

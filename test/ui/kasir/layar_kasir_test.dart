@@ -15,7 +15,10 @@ import 'package:struk_bangunan/ui/tema.dart';
 
 import '../../bantuan_basisdata.dart';
 
-Future<KeranjangController> _pasang(WidgetTester tester) async {
+Future<KeranjangController> _pasang(
+  WidgetTester tester, {
+  List<ItemBelanja> draf = const [],
+}) async {
   // Layar ini didesain untuk layar ponsel asli (tinggi), bukan viewport uji
   // bawaan 800x600 (rasio lanskap). Tanpa ini, form + strip favorit + bilah
   // total meluap di viewport bawaan meski tidak meluap di ponsel sungguhan.
@@ -32,6 +35,9 @@ Future<KeranjangController> _pasang(WidgetTester tester) async {
     db,
   ).catatPemakaian('Paku 5cm', 'kg', DateTime(2026, 9, 18));
   final prefs = await SharedPreferences.getInstance();
+  if (draf.isNotEmpty) {
+    await DrafRepository(prefs).simpan(draf);
+  }
   final keranjang = KeranjangController(
     draf: DrafRepository(prefs),
     transaksi: TransaksiRepository(db),
@@ -239,4 +245,31 @@ void main() {
       expect(find.text('Rp 999.999.999'), findsOneWidget);
     },
   );
+
+  testWidgets('draf keranjang pulih setelah aplikasi dimatikan', (
+    tester,
+  ) async {
+    final keranjang = await _pasang(
+      tester,
+      draf: [
+        ItemBelanja(nama: 'Semen', qty: 3, satuan: 'sak', hargaSatuan: 65000),
+      ],
+    );
+
+    expect(find.text('Semen'), findsOneWidget);
+    expect(keranjang.total, 195000);
+  });
+
+  testWidgets('tombol jumlah punya label semantik untuk pembaca layar', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+
+    await _pasang(tester);
+
+    expect(find.bySemanticsLabel('Kurangi jumlah'), findsOneWidget);
+    expect(find.bySemanticsLabel('Tambah jumlah'), findsOneWidget);
+
+    handle.dispose();
+  });
 }

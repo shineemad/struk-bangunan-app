@@ -267,4 +267,67 @@ void main() {
     expect(await db.query('transaksi'), hasLength(1));
     expect(await TransaksiRepository(db).ambil('0002'), isNull);
   });
+
+  testWidgets(
+    'tombol TRANSAKSI BARU hanya muncul setelah tersimpan dan menutup layar',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final db = await bukaBasisdataUji();
+      await siapkanSkema(db);
+      addTearDown(db.close);
+      final prefs = await SharedPreferences.getInstance();
+
+      final keranjang = KeranjangController(
+        draf: DrafRepository(prefs),
+        transaksi: TransaksiRepository(db),
+        favorit: FavoritRepository(db),
+      );
+      await keranjang.tambah(
+        ItemBelanja(nama: 'Semen', qty: 3, satuan: 'sak', hargaSatuan: 65000),
+      );
+
+      // Dipasang lewat rute yang bisa di-pop, supaya penekanan tombol bisa
+      // dibuktikan benar-benar menutup layar Pratinjau.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaTerang(),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => LayarPratinjau(
+                        profil: const ProfilToko(
+                          namaToko: 'TB. SINAR BANGUNAN',
+                        ),
+                        keranjang: keranjang,
+                        pengirim: _PengirimPalsu(),
+                      ),
+                    ),
+                  ),
+                  child: const Text('buka pratinjau'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('buka pratinjau'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('tombol-transaksi-baru')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('tombol-simpan')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('tombol-transaksi-baru')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('tombol-transaksi-baru')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayarPratinjau), findsNothing);
+    },
+  );
 }
