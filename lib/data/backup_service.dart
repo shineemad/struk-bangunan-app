@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 import '../domain/profil_toko.dart';
+import 'pengaturan_keluaran_repository.dart';
 import 'profil_repository.dart';
 
-const int versiBackup = 1;
+const int versiBackup = 2;
 
 /// Batas ukuran berkas cadangan: 16 MiB dalam kode-unit, sesuai spec bagian 4
 /// (berkas berasal dari luar aplikasi, jadi ukurannya harus dibatasi sebelum
@@ -27,8 +28,9 @@ class BackupRusak implements Exception {
 class BackupService {
   final Database _db;
   final ProfilRepository _profil;
+  final PengaturanKeluaranRepository _pengaturan;
 
-  BackupService(this._db, this._profil);
+  BackupService(this._db, this._profil, this._pengaturan);
 
   Future<String> ekspor() async {
     final profil = await _profil.muat();
@@ -38,6 +40,7 @@ class BackupService {
       'versi': versiBackup,
       'dibuat_ms': DateTime.now().millisecondsSinceEpoch,
       'profil': profil == null ? null : _profilKePeta(profil),
+      'pengaturan': _pengaturanKePeta(await _pengaturan.muat()),
       'meta': {
         for (final b in meta) b['kunci'] as String: b['nilai'] as String,
       },
@@ -108,6 +111,7 @@ class BackupService {
     // basis data terlanjur ditimpa — galat yang tidak akan tertangkap
     // pemanggil yang menunggu BackupRusak.
     final profil = _bacaProfil(data['profil']);
+    final keluaran = _bacaPengaturan(data['pengaturan']);
 
     await _db.transaction((txn) async {
       await txn.delete('item');
@@ -135,6 +139,9 @@ class BackupService {
 
     if (profil != null) {
       await _profil.simpan(profil);
+    }
+    if (keluaran != null) {
+      await _pengaturan.simpan(keluaran);
     }
   }
 
@@ -277,5 +284,40 @@ class BackupService {
       // pemanggil menunggu BackupRusak, dan ini masih di sisi validasi.
       throw const BackupRusak('Bagian "profil" pada berkas cadangan rusak.');
     }
+  }
+
+  Map<String, Object?> _pengaturanKePeta(PengaturanKeluaran p) => {
+    PengaturanKeluaranRepository.kunciFormat: p.formatKiriman.name,
+    PengaturanKeluaranRepository.kunciPrinterMac: p.printerMac,
+    PengaturanKeluaranRepository.kunciPrinterNama: p.printerNama,
+  };
+
+  /// Null berarti berkas cadangan tidak memuat bagian pengaturan — benar untuk
+  /// setiap berkas versi 1. Pengaturan yang sedang dipakai dibiarkan utuh.
+  PengaturanKeluaran? _bacaPengaturan(Object? data) {
+    if (data == null) return null;
+    if (data is! Map<Object?, Object?>) {
+      throw const BackupRusak(
+        'Bagian "pengaturan" pada berkas cadangan rusak.',
+      );
+    }
+    String teks(String kunci) {
+      final nilai = data[kunci];
+      if (nilai == null) return '';
+      if (nilai is! String) {
+        throw BackupRusak(
+          'Kolom "$kunci" pada pengaturan cadangan tidak sesuai.',
+        );
+      }
+      return nilai;
+    }
+
+    return PengaturanKeluaran(
+      formatKiriman: PengaturanKeluaranRepository.formatDariNama(
+        teks(PengaturanKeluaranRepository.kunciFormat),
+      ),
+      printerMac: teks(PengaturanKeluaranRepository.kunciPrinterMac),
+      printerNama: teks(PengaturanKeluaranRepository.kunciPrinterNama),
+    );
   }
 }
