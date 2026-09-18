@@ -6,6 +6,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:struk_bangunan/data/backup_service.dart';
 import 'package:struk_bangunan/data/basisdata.dart';
 import 'package:struk_bangunan/data/favorit_repository.dart';
+import 'package:struk_bangunan/data/pengaturan_keluaran_repository.dart';
 import 'package:struk_bangunan/data/profil_repository.dart';
 import 'package:struk_bangunan/data/transaksi_repository.dart';
 import 'package:struk_bangunan/domain/item_belanja.dart';
@@ -13,13 +14,18 @@ import 'package:struk_bangunan/domain/profil_toko.dart';
 
 import '../bantuan_basisdata.dart';
 
-Future<(Database, BackupService, ProfilRepository)> _siap() async {
+Future<
+  (Database, BackupService, ProfilRepository, PengaturanKeluaranRepository)
+>
+_siap() async {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
   final db = await bukaBasisdataUji();
   await siapkanSkema(db);
-  final profil = ProfilRepository(await SharedPreferences.getInstance());
-  return (db, BackupService(db, profil), profil);
+  final prefs = await SharedPreferences.getInstance();
+  final profil = ProfilRepository(prefs);
+  final pengaturan = PengaturanKeluaranRepository(prefs);
+  return (db, BackupService(db, profil, pengaturan), profil, pengaturan);
 }
 
 Future<void> _isiContoh(Database db, ProfilRepository profil) async {
@@ -45,7 +51,7 @@ Future<void> _isiContoh(Database db, ProfilRepository profil) async {
 
 void main() {
   test('ekspor menghasilkan JSON bernomor versi', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -59,7 +65,7 @@ void main() {
   });
 
   test('ekspor lalu impor menghasilkan data yang sama', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -81,7 +87,7 @@ void main() {
   });
 
   test('impor menimpa, bukan menggabungkan', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
     final berkas = await backup.ekspor();
@@ -99,7 +105,7 @@ void main() {
   });
 
   test('nomor nota berikutnya ikut terbawa', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -116,14 +122,14 @@ void main() {
   });
 
   test('teks yang bukan JSON ditolak', () async {
-    final (db, backup, _) = await _siap();
+    final (db, backup, _, _) = await _siap();
     addTearDown(db.close);
 
     expect(() => backup.impor('bukan json'), throwsA(isA<BackupRusak>()));
   });
 
   test('JSON tanpa versi ditolak', () async {
-    final (db, backup, _) = await _siap();
+    final (db, backup, _, _) = await _siap();
     addTearDown(db.close);
 
     expect(
@@ -133,7 +139,7 @@ void main() {
   });
 
   test('versi yang lebih baru ditolak', () async {
-    final (db, backup, _) = await _siap();
+    final (db, backup, _, _) = await _siap();
     addTearDown(db.close);
 
     expect(
@@ -143,7 +149,7 @@ void main() {
   });
 
   test('data lama tetap utuh bila berkas ditolak', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -157,7 +163,7 @@ void main() {
   });
 
   test('berkas dengan tipe kolom yang salah ditolak', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -181,7 +187,7 @@ void main() {
   });
 
   test('baris favorit dengan tipe kolom yang salah ditolak', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -207,7 +213,7 @@ void main() {
   });
 
   test('profil dengan tipe kolom yang salah ditolak sebelum menimpa', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -226,7 +232,7 @@ void main() {
   });
 
   test('berkas tanpa bagian meta ditolak sebelum menghapus apa pun', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -255,7 +261,7 @@ void main() {
   });
 
   test('bagian meta kosong ditolak', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -272,7 +278,7 @@ void main() {
   });
 
   test('pencacah nomor nota yang bukan angka ditolak', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -289,7 +295,7 @@ void main() {
   });
 
   test('nota tanpa item ditolak', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -308,7 +314,7 @@ void main() {
   });
 
   test('item yang menunjuk nota tak dikenal ditolak', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -337,7 +343,7 @@ void main() {
   });
 
   test('item dengan kuantitas nol ditolak', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -366,7 +372,7 @@ void main() {
   });
 
   test('berkas cadangan yang terlalu besar ditolak', () async {
-    final (db, backup, profil) = await _siap();
+    final (db, backup, profil, _) = await _siap();
     addTearDown(db.close);
     await _isiContoh(db, profil);
 
@@ -376,5 +382,110 @@ void main() {
 
     await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
     expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+  });
+
+  test('ekspor membawa pengaturan keluaran', () async {
+    final (db, backup, profil, pengaturan) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+    await pengaturan.simpan(
+      const PengaturanKeluaran(
+        formatKiriman: FormatKiriman.pdf,
+        printerMac: '66:22:11:AA:BB:CC',
+        printerNama: 'RPP02N',
+      ),
+    );
+
+    final data = jsonDecode(await backup.ekspor()) as Map<String, Object?>;
+    expect(data['versi'], 2);
+    final keluaran = data['pengaturan']! as Map<String, Object?>;
+    expect(keluaran['format_kiriman'], 'pdf');
+    expect(keluaran['printer_terakhir_mac'], '66:22:11:AA:BB:CC');
+    expect(keluaran['printer_terakhir_nama'], 'RPP02N');
+  });
+
+  test('impor memulihkan pengaturan keluaran', () async {
+    final (db, backup, profil, pengaturan) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+    await pengaturan.simpan(
+      const PengaturanKeluaran(
+        formatKiriman: FormatKiriman.pdf,
+        printerMac: '66:22:11:AA:BB:CC',
+        printerNama: 'RPP02N',
+      ),
+    );
+    final berkas = await backup.ekspor();
+
+    await pengaturan.simpan(const PengaturanKeluaran());
+    await backup.impor(berkas);
+
+    final hasil = await pengaturan.muat();
+    expect(hasil.formatKiriman, FormatKiriman.pdf);
+    expect(hasil.printerNama, 'RPP02N');
+  });
+
+  test('cadangan versi 1 tetap bisa dipulihkan', () async {
+    final (db, backup, profil, pengaturan) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+    await pengaturan.simpan(
+      const PengaturanKeluaran(formatKiriman: FormatKiriman.pdf),
+    );
+
+    // Berkas versi 1 tidak punya bagian `pengaturan` sama sekali. Ia harus
+    // diterima, dan pengaturan yang sedang dipakai tidak boleh ikut terhapus.
+    final lama = jsonDecode(await backup.ekspor()) as Map<String, Object?>;
+    lama['versi'] = 1;
+    lama.remove('pengaturan');
+
+    await backup.impor(jsonEncode(lama));
+
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await pengaturan.muat()).formatKiriman, FormatKiriman.pdf);
+  });
+
+  test('pengaturan yang bukan map ditolak sebelum menimpa', () async {
+    final (db, backup, profil, pengaturan) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+    await pengaturan.simpan(
+      const PengaturanKeluaran(formatKiriman: FormatKiriman.pdf),
+    );
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '1'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [],
+      'pengaturan': 'bukan map',
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await pengaturan.muat()).formatKiriman, FormatKiriman.pdf);
+  });
+
+  test('kolom pengaturan dengan tipe salah ditolak sebelum menimpa', () async {
+    final (db, backup, profil, pengaturan) = await _siap();
+    addTearDown(db.close);
+    await _isiContoh(db, profil);
+    await pengaturan.simpan(
+      const PengaturanKeluaran(formatKiriman: FormatKiriman.pdf),
+    );
+
+    final rusak = jsonEncode({
+      'versi': versiBackup,
+      'meta': {'nomor_nota_berikutnya': '1'},
+      'transaksi': [],
+      'item': [],
+      'favorit': [],
+      'pengaturan': {'format_kiriman': 123},
+    });
+
+    await expectLater(backup.impor(rusak), throwsA(isA<BackupRusak>()));
+    expect(await TransaksiRepository(db).ambil('0001'), isNotNull);
+    expect((await pengaturan.muat()).formatKiriman, FormatKiriman.pdf);
   });
 }

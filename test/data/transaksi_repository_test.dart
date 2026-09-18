@@ -217,4 +217,21 @@ void main() {
     );
     expect(baris.first['nilai'], '1');
   });
+
+  test('nota tanpa item ditolak dan tidak memakai nomor nota', () async {
+    final (db, repo) = await _siap();
+    addTearDown(db.close);
+
+    await expectLater(
+      repo.simpan(items: [], waktu: DateTime(2026, 9, 17)),
+      throwsArgumentError,
+    );
+
+    final baris = await db.query(
+      'meta',
+      where: 'kunci = ?',
+      whereArgs: ['nomor_nota_berikutnya'],
+    );
+    expect(baris.first['nilai'], '1');
+  });
 }

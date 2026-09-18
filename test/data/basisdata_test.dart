@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:struk_bangunan/data/basisdata.dart';
 
 import '../bantuan_basisdata.dart';
@@ -143,5 +147,33 @@ void main() {
 
     await db.delete('transaksi', where: 'id = ?', whereArgs: [id]);
     expect(await db.query('item'), isEmpty);
+  });
+
+  test('basis data versi lama tetap terbuka dan datanya utuh', () async {
+    sqfliteFfiInit();
+    final folder = await Directory.systemTemp.createTemp('strukbangunan_uji');
+    addTearDown(() => folder.delete(recursive: true));
+    final jalur = p.join(folder.path, 'coba.db');
+
+    final lama = await databaseFactoryFfi.openDatabase(
+      jalur,
+      options: opsiBasisdata(versi: 1),
+    );
+    await lama.insert('transaksi', {
+      'nomor_nota': '0001',
+      'waktu_ms': 1000,
+      'total': 5000,
+    });
+    await lama.close();
+
+    // Tanpa onUpgrade, membuka berkas yang sama dengan versi lebih tinggi
+    // melempar dan pengguna kehilangan seluruh datanya.
+    final baru = await databaseFactoryFfi.openDatabase(
+      jalur,
+      options: opsiBasisdata(versi: versiSkema + 1),
+    );
+    addTearDown(baru.close);
+
+    expect(await baru.query('transaksi'), hasLength(1));
   });
 }
