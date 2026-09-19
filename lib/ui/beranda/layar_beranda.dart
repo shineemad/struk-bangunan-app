@@ -126,52 +126,74 @@ class _LayarBerandaState extends State<LayarBeranda> {
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(Ukuran.jarak),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 24),
-              Text(profil.namaToko, style: teks.headlineSmall),
-              if (profil.alamat.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(profil.alamat, style: teks.bodySmall),
-              ],
-              const SizedBox(height: 24),
-              if (rekap != null)
-                _Kartu(
-                  label: 'Penjualan hari ini',
-                  nilai: 'Rp ${formatRupiah(rekap.totalRupiah)}',
-                  keterangan: '${rekap.jumlahNota} nota',
+        // Konten bergulir di atas, tombol menempel di bawah: jempol satu
+        // tangan menjangkaunya tanpa menggeser genggaman, dan `Expanded`
+        // membuat tata letaknya mustahil meluap di layar pendek.
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  Ukuran.jarak,
+                  Ukuran.jarak,
+                  Ukuran.jarak,
+                  0,
                 ),
-              if (!keranjang.kosong) ...[
-                const SizedBox(height: 12),
-                _Kartu(
-                  label: 'Keranjang belum selesai',
-                  nilai: 'Rp ${formatRupiah(keranjang.total)}',
-                  keterangan: '${keranjang.items.length} barang',
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 24),
+                    Text(profil.namaToko, style: teks.headlineSmall),
+                    if (profil.alamat.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(profil.alamat, style: teks.bodySmall),
+                    ],
+                    const SizedBox(height: 24),
+                    if (rekap != null)
+                      _Kartu(
+                        label: 'Penjualan hari ini',
+                        nilai: 'Rp ${formatRupiah(rekap.totalRupiah)}',
+                        keterangan: '${rekap.jumlahNota} nota',
+                      ),
+                    if (!keranjang.kosong) ...[
+                      const SizedBox(height: 12),
+                      _Kartu(
+                        label: 'Keranjang belum selesai',
+                        nilai: 'Rp ${formatRupiah(keranjang.total)}',
+                        keterangan: '${keranjang.items.length} barang',
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-              const SizedBox(height: 24),
-              FilledButton(
-                key: const Key('tombol-transaksi-baru-beranda'),
-                onPressed: _bukaKasir,
-                child: Text(labelTombol),
               ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                key: const Key('tombol-pengaturan'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(Ukuran.sentuh),
-                  side: const BorderSide(color: Warna.garis),
-                  foregroundColor: Warna.teks,
-                ),
-                onPressed: _bukaPengaturan,
-                child: const Text('PENGATURAN'),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(Ukuran.jarak),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  FilledButton(
+                    key: const Key('tombol-transaksi-baru-beranda'),
+                    onPressed: _bukaKasir,
+                    child: Text(labelTombol),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    key: const Key('tombol-pengaturan'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(Ukuran.sentuh),
+                      side: const BorderSide(color: Warna.garis),
+                      foregroundColor: Warna.teks,
+                    ),
+                    onPressed: _bukaPengaturan,
+                    child: const Text('PENGATURAN'),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

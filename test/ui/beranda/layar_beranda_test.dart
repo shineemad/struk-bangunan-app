@@ -281,6 +281,23 @@ void main() {
     expect(find.text('0 nota'), findsOneWidget);
   });
 
+  testWidgets('tombol ditambatkan ke bawah layar, bukan mengikuti konten', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pasang(tester, prefs, ukuran: const Size(390, 900));
+
+    // Kontennya pendek, jadi kalau tombol mengikuti konten ia akan berhenti
+    // di sekitar sepertiga atas. Menempel di bawah berarti tepinya hanya
+    // berjarak padding dari dasar layar.
+    final rect = tester.getRect(find.byKey(const Key('tombol-pengaturan')));
+    expect(rect.bottom, greaterThan(900 - 40));
+    expect(rect.bottom, lessThanOrEqualTo(900));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'melanjutkan keranjang: label tombol utama tidak membungkus dan tombol '
     'pengaturan tetap terjangkau di layar pendek 360x640',
