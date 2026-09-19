@@ -120,108 +120,130 @@ class _LayarKasirState extends State<LayarKasir> {
       appBar: AppBar(title: const Text('Kasir')),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(Ukuran.jarak),
-            child: Column(
-              children: [
-                KolomIsian(
-                  key: const Key('kolom-nama'),
-                  label: 'Nama bahan',
-                  controller: _nama,
-                  hint: 'Semen, pasir, paku...',
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+          // Bagian atas (tetap): form input, sepertiga atas layar. Bergulir
+          // sendiri (SingleChildScrollView) bila kontennya tak muat, alih-alih
+          // meluap — form dipakai untuk setiap barang, tidak boleh hilang.
+          Flexible(
+            flex: 3,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(Ukuran.jarak),
+                child: Column(
                   children: [
-                    _TombolJumlah(
-                      key: const Key('jumlah-kurang'),
-                      ikon: Icons.remove,
-                      label: 'Kurangi jumlah',
-                      onTekan: () => _ubahJumlah(-1),
+                    KolomIsian(
+                      key: const Key('kolom-nama'),
+                      label: 'Nama bahan',
+                      controller: _nama,
+                      hint: 'Semen, pasir, paku...',
+                      onChanged: (_) => setState(() {}),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: KolomIsian(
-                        key: const Key('kolom-jumlah'),
-                        label: 'Jumlah',
-                        controller: _jumlah,
-                        angka: true,
-                        formatters: [FormatterJumlah()],
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _TombolJumlah(
+                          key: const Key('jumlah-kurang'),
+                          ikon: Icons.remove,
+                          label: 'Kurangi jumlah',
+                          onTekan: () => _ubahJumlah(-1),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: KolomIsian(
+                            key: const Key('kolom-jumlah'),
+                            label: 'Jumlah',
+                            controller: _jumlah,
+                            angka: true,
+                            formatters: [FormatterJumlah()],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _TombolJumlah(
+                          key: const Key('jumlah-tambah'),
+                          ikon: Icons.add,
+                          label: 'Tambah jumlah',
+                          onTekan: () => _ubahJumlah(1),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    KolomIsian(
+                      key: const Key('kolom-harga'),
+                      label: 'Harga satuan',
+                      controller: _harga,
+                      hint: '0',
+                      angka: true,
+                      formatters: [FormatterRupiah()],
+                      focusNode: _fokusHarga,
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: Ukuran.sentuh,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: satuanBawaan.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) => ChipSatuan(
+                          satuan: satuanBawaan[i],
+                          terpilih: satuanBawaan[i] == _satuan,
+                          onPilih: () =>
+                              setState(() => _satuan = satuanBawaan[i]),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    _TombolJumlah(
-                      key: const Key('jumlah-tambah'),
-                      ikon: Icons.add,
-                      label: 'Tambah jumlah',
-                      onTekan: () => _ubahJumlah(1),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      key: const Key('tombol-tambah'),
+                      onPressed: _bolehTambah ? _tambah : null,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Warna.tambah,
+                      ),
+                      child: const Text('+ TAMBAH KE DAFTAR'),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                KolomIsian(
-                  key: const Key('kolom-harga'),
-                  label: 'Harga satuan',
-                  controller: _harga,
-                  hint: '0',
-                  angka: true,
-                  formatters: [FormatterRupiah()],
-                  focusNode: _fokusHarga,
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: Ukuran.sentuh,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: satuanBawaan.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (_, i) => ChipSatuan(
-                      satuan: satuanBawaan[i],
-                      terpilih: satuanBawaan[i] == _satuan,
-                      onPilih: () => setState(() => _satuan = satuanBawaan[i]),
+              ),
+            ),
+          ),
+          // Bagian tengah (bergulir): favorit lalu daftar item, spec bagian 5.
+          Flexible(
+            flex: 2,
+            child: Column(
+              children: [
+                if (!favorit.sedangMemuat && favorit.daftar.isNotEmpty)
+                  SizedBox(
+                    height: Ukuran.sentuh + 16,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Ukuran.jarak,
+                      ),
+                      itemCount: favorit.daftar.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                      itemBuilder: (_, i) {
+                        final bahan = favorit.daftar[i];
+                        return ChipSatuan(
+                          satuan: bahan.nama,
+                          terpilih: false,
+                          onPilih: () =>
+                              _pakaiFavorit(bahan.nama, bahan.satuanTerakhir),
+                        );
+                      },
+                    ),
+                  ),
+                Expanded(
+                  child: ListView.builder(
+                    key: const Key('daftar-item'),
+                    itemCount: keranjang.items.length,
+                    itemBuilder: (_, i) => BarisItem(
+                      key: Key('baris-$i'),
+                      item: keranjang.items[i],
+                      indeks: i,
+                      onHapus: () => _tanyaHapus(i),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  key: const Key('tombol-tambah'),
-                  onPressed: _bolehTambah ? _tambah : null,
-                  style: FilledButton.styleFrom(backgroundColor: Warna.tambah),
-                  child: const Text('+ TAMBAH KE DAFTAR'),
-                ),
               ],
-            ),
-          ),
-          if (!favorit.sedangMemuat && favorit.daftar.isNotEmpty)
-            SizedBox(
-              height: Ukuran.sentuh + 16,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: Ukuran.jarak),
-                itemCount: favorit.daftar.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final bahan = favorit.daftar[i];
-                  return ChipSatuan(
-                    satuan: bahan.nama,
-                    terpilih: false,
-                    onPilih: () =>
-                        _pakaiFavorit(bahan.nama, bahan.satuanTerakhir),
-                  );
-                },
-              ),
-            ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: keranjang.items.length,
-              itemBuilder: (_, i) => BarisItem(
-                key: Key('baris-$i'),
-                item: keranjang.items[i],
-                indeks: i,
-                onHapus: () => _tanyaHapus(i),
-              ),
             ),
           ),
           if (!keyboardTerbuka)

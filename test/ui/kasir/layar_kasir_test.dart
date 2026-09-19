@@ -10,6 +10,7 @@ import 'package:struk_bangunan/domain/item_belanja.dart';
 import 'package:struk_bangunan/state/favorit_controller.dart';
 import 'package:struk_bangunan/state/keranjang_controller.dart';
 import 'package:struk_bangunan/ui/kasir/layar_kasir.dart';
+import 'package:struk_bangunan/ui/komponen/baris_item.dart';
 import 'package:struk_bangunan/ui/komponen/chip_satuan.dart';
 import 'package:struk_bangunan/ui/tema.dart';
 
@@ -18,12 +19,20 @@ import '../../bantuan_basisdata.dart';
 Future<KeranjangController> _pasang(
   WidgetTester tester, {
   List<ItemBelanja> draf = const [],
+  Size? ukuran,
 }) async {
   // Layar ini didesain untuk layar ponsel asli (tinggi), bukan viewport uji
   // bawaan 800x600 (rasio lanskap). Tanpa ini, form + strip favorit + bilah
   // total meluap di viewport bawaan meski tidak meluap di ponsel sungguhan.
-  tester.view.physicalSize = const Size(1080, 2340);
-  tester.view.devicePixelRatio = 3.0;
+  // `ukuran` (opsional) memilih ukuran logis sendiri untuk test multi-layar;
+  // tanpa itu perilaku test lama (1080x2340 @ dpr 3.0) tidak berubah.
+  if (ukuran != null) {
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.physicalSize = ukuran;
+  } else {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3.0;
+  }
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
@@ -84,6 +93,16 @@ String _isiKolom(WidgetTester tester, String kunci) => tester
     .controller!
     .text;
 
+// Form kini bergulir sendiri (Flexible 3:2) — pada layar yang tak cukup
+// tinggi, 'tombol-tambah' bisa berada di luar area yang terlihat sampai
+// digulir, sama seperti pengguna sungguhan wajib menggulir untuk menjangkaunya.
+Future<void> _tekanTambah(WidgetTester tester) async {
+  await tester.ensureVisible(find.byKey(const Key('tombol-tambah')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('tombol-tambah')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('tombol tambah nonaktif selama nama bahan kosong', (
     tester,
@@ -106,8 +125,7 @@ void main() {
     final keranjang = await _pasang(tester);
     await _isiForm(tester);
 
-    await tester.tap(find.byKey(const Key('tombol-tambah')));
-    await tester.pumpAndSettle();
+    await _tekanTambah(tester);
 
     expect(keranjang.items, hasLength(1));
     expect(keranjang.total, 195000);
@@ -119,8 +137,7 @@ void main() {
     await _pasang(tester);
     await _isiForm(tester);
 
-    await tester.tap(find.byKey(const Key('tombol-tambah')));
-    await tester.pumpAndSettle();
+    await _tekanTambah(tester);
 
     expect(_isiKolom(tester, 'kolom-nama'), isEmpty);
     expect(_isiKolom(tester, 'kolom-jumlah'), '1');
@@ -238,8 +255,7 @@ void main() {
       await _pasang(tester);
       await _isiForm(tester, jumlah: '1', harga: '999999999');
 
-      await tester.tap(find.byKey(const Key('tombol-tambah')));
-      await tester.pumpAndSettle();
+      await _tekanTambah(tester);
 
       expect(tester.takeException(), isNull);
       expect(find.text('Rp 999.999.999'), findsOneWidget);
@@ -271,5 +287,35 @@ void main() {
     expect(find.bySemanticsLabel('Tambah jumlah'), findsOneWidget);
 
     handle.dispose();
+  });
+
+  group('daftar belanja punya ruang di berbagai ukuran layar', () {
+    const ukuranLayar = {
+      'Android murah (360x640)': Size(360, 640),
+      'ponsel umum (360x780)': Size(360, 780),
+      'ponsel tinggi (390x900)': Size(390, 900),
+    };
+
+    for (final entri in ukuranLayar.entries) {
+      testWidgets('${entri.key}: tidak meluap dan daftar terlihat', (
+        tester,
+      ) async {
+        final keranjang = await _pasang(tester, ukuran: entri.value);
+        for (final nama in ['Semen', 'Pasir', 'Bata']) {
+          await keranjang.tambah(
+            ItemBelanja(nama: nama, qty: 3, satuan: 'sak', hargaSatuan: 65000),
+          );
+        }
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+
+        final tinggiDaftar = tester
+            .getSize(find.byKey(const Key('daftar-item')))
+            .height;
+        expect(tinggiDaftar, greaterThanOrEqualTo(72));
+        expect(find.byType(BarisItem), findsAtLeastNWidgets(1));
+      });
+    }
   });
 }
