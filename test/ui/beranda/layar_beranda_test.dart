@@ -37,6 +37,7 @@ Future<void> _pasang(
   WidgetTester tester,
   SharedPreferences prefs, {
   Size? ukuran,
+  List<ItemBelanja> penjualanHariIni = const [],
 }) async {
   if (ukuran != null) {
     tester.view.devicePixelRatio = 1.0;
@@ -51,6 +52,12 @@ Future<void> _pasang(
   final db = await bukaBasisdataUji();
   await siapkanSkema(db);
   addTearDown(db.close);
+
+  if (penjualanHariIni.isNotEmpty) {
+    await TransaksiRepository(
+      db,
+    ).simpan(items: penjualanHariIni, waktu: DateTime.now());
+  }
 
   // MultiProvider dipasang membungkus MaterialApp, bukan di dalam `home` —
   // LayarKasir yang didorong Beranda lewat Navigator.push butuh kedua
@@ -74,6 +81,7 @@ Future<void> _pasang(
         home: LayarBeranda(
           profil: ProfilRepository(prefs),
           pengaturan: PengaturanKeluaranRepository(prefs),
+          transaksi: TransaksiRepository(db),
           pengirim: _PengirimPalsu(),
         ),
       ),
@@ -245,6 +253,33 @@ void main() {
       );
     },
   );
+
+  testWidgets('menampilkan rekap penjualan hari ini', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pasang(
+      tester,
+      prefs,
+      penjualanHariIni: [
+        ItemBelanja(nama: 'Semen', qty: 3, satuan: 'sak', hargaSatuan: 65000),
+      ],
+    );
+
+    expect(find.text('Penjualan hari ini'), findsOneWidget);
+    expect(find.text('Rp 195.000'), findsOneWidget);
+    expect(find.text('1 nota'), findsOneWidget);
+  });
+
+  testWidgets('rekap menunjukkan nol sebelum ada penjualan', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pasang(tester, prefs);
+
+    expect(find.text('Rp 0'), findsOneWidget);
+    expect(find.text('0 nota'), findsOneWidget);
+  });
 
   testWidgets(
     'melanjutkan keranjang: label tombol utama tidak membungkus dan tombol '

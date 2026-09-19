@@ -122,6 +122,7 @@ class _DemoState extends State<_Demo> {
         home: LayarBeranda(
           profil: ProfilRepository(widget.prefs),
           pengaturan: PengaturanKeluaranRepository(widget.prefs),
+          transaksi: _TransaksiDemo(_db),
           pengirim: _PengirimDemo(_lapor),
         ),
       ),
@@ -154,9 +155,18 @@ class _KeranjangDemo extends KeranjangController {
   }
 }
 
+/// Rekap harian pratinjau. Angkanya dikarang supaya kartu Beranda punya isi
+/// di browser; basis data sungguhannya tidak ada di sini.
+class _TransaksiDemo extends TransaksiRepository {
+  _TransaksiDemo(super.db);
+
+  @override
+  Future<RekapHarian> rekap(DateTime hari) async =>
+      const RekapHarian(jumlahNota: 7, totalRupiah: 4185000);
+}
+
 class _FavoritDemo extends FavoritController {
   _FavoritDemo(super.repo);
-
   final _isi = const [
     BahanFavorit(
       nama: 'Semen',

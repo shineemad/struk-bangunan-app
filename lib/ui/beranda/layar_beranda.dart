@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../data/pengaturan_keluaran_repository.dart';
 import '../../data/profil_repository.dart';
+import '../../data/transaksi_repository.dart';
 import '../../domain/profil_toko.dart';
 import '../../domain/uang.dart';
 import '../../state/keranjang_controller.dart';
@@ -22,12 +23,14 @@ const _profilBawaan = ProfilToko(namaToko: 'TOKO BANGUNAN');
 class LayarBeranda extends StatefulWidget {
   final ProfilRepository profil;
   final PengaturanKeluaranRepository pengaturan;
+  final TransaksiRepository transaksi;
   final PengirimStrukKontrak pengirim;
 
   const LayarBeranda({
     super.key,
     required this.profil,
     required this.pengaturan,
+    required this.transaksi,
     required this.pengirim,
   });
 
@@ -37,6 +40,7 @@ class LayarBeranda extends StatefulWidget {
 
 class _LayarBerandaState extends State<LayarBeranda> {
   ProfilToko? _profil;
+  RekapHarian? _rekap;
   Future<void> _draf = Future<void>.value();
 
   @override
@@ -47,11 +51,17 @@ class _LayarBerandaState extends State<LayarBeranda> {
       _draf = context.read<KeranjangController>().muatDraf();
     });
     _muatProfil();
+    _muatRekap();
   }
 
   Future<void> _muatProfil() async {
     final profil = await widget.profil.muat() ?? _profilBawaan;
     if (mounted) setState(() => _profil = profil);
+  }
+
+  Future<void> _muatRekap() async {
+    final rekap = await widget.transaksi.rekap(DateTime.now());
+    if (mounted) setState(() => _rekap = rekap);
   }
 
   Future<void> _bukaKasir() async {
@@ -66,7 +76,7 @@ class _LayarBerandaState extends State<LayarBeranda> {
     // context rute baru yang didorong Navigator tidak berada di bawah
     // provider manapun yang dipasang di dalam rute ini.
     final keranjang = context.read<KeranjangController>();
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => LayarKasir(
           onKirim: () => Navigator.of(context).push(
@@ -81,6 +91,8 @@ class _LayarBerandaState extends State<LayarBeranda> {
         ),
       ),
     );
+    // Penjualan bisa bertambah selama kasir berada di layar lain.
+    if (mounted) await _muatRekap();
   }
 
   void _bukaPengaturan() {
@@ -106,13 +118,11 @@ class _LayarBerandaState extends State<LayarBeranda> {
     }
 
     final keranjang = context.watch<KeranjangController>();
+    final teks = Theme.of(context).textTheme;
+    final rekap = _rekap;
     // Label tombol utama tetap satu kata pendek (muat 20/700 satu baris di
-    // 360dp) — rincian jumlah barang & total dipindah ke baris keterangan
-    // terpisah, bukan digabung ke label seperti sebelumnya.
+    // 360dp) — rincian jumlah barang & total pindah ke kartu draf di atasnya.
     final labelTombol = keranjang.kosong ? 'TRANSAKSI BARU' : 'LANJUTKAN';
-    final rincianTombol = keranjang.kosong
-        ? null
-        : '${keranjang.items.length} barang · Rp ${formatRupiah(keranjang.total)}';
 
     return Scaffold(
       body: SafeArea(
@@ -122,21 +132,28 @@ class _LayarBerandaState extends State<LayarBeranda> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 64),
-              Text(
-                profil.namaToko,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 32),
-              if (rincianTombol != null) ...[
-                Text(
-                  rincianTombol,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 8),
+              const SizedBox(height: 24),
+              Text(profil.namaToko, style: teks.headlineSmall),
+              if (profil.alamat.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(profil.alamat, style: teks.bodySmall),
               ],
+              const SizedBox(height: 24),
+              if (rekap != null)
+                _Kartu(
+                  label: 'Penjualan hari ini',
+                  nilai: 'Rp ${formatRupiah(rekap.totalRupiah)}',
+                  keterangan: '${rekap.jumlahNota} nota',
+                ),
+              if (!keranjang.kosong) ...[
+                const SizedBox(height: 12),
+                _Kartu(
+                  label: 'Keranjang belum selesai',
+                  nilai: 'Rp ${formatRupiah(keranjang.total)}',
+                  keterangan: '${keranjang.items.length} barang',
+                ),
+              ],
+              const SizedBox(height: 24),
               FilledButton(
                 key: const Key('tombol-transaksi-baru-beranda'),
                 onPressed: _bukaKasir,
@@ -155,6 +172,40 @@ class _LayarBerandaState extends State<LayarBeranda> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Kartu extends StatelessWidget {
+  final String label;
+  final String nilai;
+  final String keterangan;
+
+  const _Kartu({
+    required this.label,
+    required this.nilai,
+    required this.keterangan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final teks = Theme.of(context).textTheme;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(Ukuran.jarak),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: teks.labelLarge),
+            const SizedBox(height: 8),
+            Text(nilai, style: teks.headlineSmall),
+            const SizedBox(height: 4),
+            Text(keterangan, style: teks.bodySmall),
+          ],
         ),
       ),
     );

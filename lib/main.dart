@@ -54,6 +54,7 @@ class AplikasiStruk extends StatelessWidget {
         home: LayarBeranda(
           profil: wadah.profil,
           pengaturan: wadah.pengaturan,
+          transaksi: wadah.transaksi,
           pengirim: pengirim,
         ),
       ),
