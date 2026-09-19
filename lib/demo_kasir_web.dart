@@ -48,8 +48,11 @@ class DemoKasirWeb extends StatelessWidget {
       builder: (context, hasil) {
         final prefs = hasil.data;
         if (prefs == null) {
-          return const MaterialApp(
-            home: Scaffold(body: Center(child: CircularProgressIndicator())),
+          return MaterialApp(
+            theme: temaTerang(),
+            home: const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
           );
         }
         return _Demo(prefs: prefs);

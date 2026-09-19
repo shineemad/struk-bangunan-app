@@ -93,12 +93,9 @@ String _isiKolom(WidgetTester tester, String kunci) => tester
     .controller!
     .text;
 
-// Form kini bergulir sendiri (Flexible 3:2) — pada layar yang tak cukup
-// tinggi, 'tombol-tambah' bisa berada di luar area yang terlihat sampai
-// digulir, sama seperti pengguna sungguhan wajib menggulir untuk menjangkaunya.
+// Tombol TAMBAH kini adalah anak tetap di luar area yang bergulir (fix F1),
+// jadi selalu terlihat dan bisa ditekan langsung tanpa menggulir dulu.
 Future<void> _tekanTambah(WidgetTester tester) async {
-  await tester.ensureVisible(find.byKey(const Key('tombol-tambah')));
-  await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('tombol-tambah')));
   await tester.pumpAndSettle();
 }
@@ -315,7 +312,60 @@ void main() {
             .height;
         expect(tinggiDaftar, greaterThanOrEqualTo(72));
         expect(find.byType(BarisItem), findsAtLeastNWidgets(1));
+
+        // Fix F1: '+ TAMBAH KE DAFTAR' harus seluruhnya berada di dalam
+        // layar tanpa digulir, pada setiap ukuran — dibuktikan lewat
+        // geometri (rect), bukan `find` (yang menemukan widget di luar
+        // layar juga).
+        final rectTombol = tester.getRect(
+          find.byKey(const Key('tombol-tambah')),
+        );
+        expect(rectTombol.top, greaterThanOrEqualTo(0));
+        expect(rectTombol.bottom, lessThanOrEqualTo(entri.value.height));
       });
     }
+  });
+
+  testWidgets('tombol tambah tetap terlihat pada skala font besar', (
+    tester,
+  ) async {
+    // Spec bagian 8: pengguna lansia umumnya sudah memperbesar font sistem.
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    SharedPreferences.setMockInitialValues({});
+    final db = await bukaBasisdataUji();
+    await siapkanSkema(db);
+    addTearDown(db.close);
+    final prefs = await SharedPreferences.getInstance();
+    final keranjang = KeranjangController(
+      draf: DrafRepository(prefs),
+      transaksi: TransaksiRepository(db),
+      favorit: FavoritRepository(db),
+    );
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: keranjang),
+          ChangeNotifierProvider.value(
+            value: FavoritController(FavoritRepository(db)),
+          ),
+        ],
+        child: MaterialApp(
+          theme: temaTerang(),
+          home: LayarKasir(onKirim: () {}),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    final rect = tester.getRect(find.byKey(const Key('tombol-tambah')));
+    expect(rect.top, greaterThanOrEqualTo(0));
+    expect(rect.bottom, lessThanOrEqualTo(640));
   });
 }

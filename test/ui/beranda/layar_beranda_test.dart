@@ -17,6 +17,7 @@ import 'package:struk_bangunan/state/pengirim_struk.dart';
 import 'package:struk_bangunan/ui/beranda/layar_beranda.dart';
 import 'package:struk_bangunan/ui/kasir/layar_kasir.dart';
 import 'package:struk_bangunan/ui/pengaturan/layar_pengaturan.dart';
+import 'package:struk_bangunan/ui/struk/layar_pratinjau.dart';
 import 'package:struk_bangunan/ui/tema.dart';
 
 import '../../bantuan_basisdata.dart';
@@ -123,6 +124,12 @@ void main() {
 
     await _pasang(tester, prefs);
 
+    // Design system bagian 7: tombol sekunder tinggi minimal 48 (Ukuran.sentuh).
+    final tinggiTombol = tester
+        .getSize(find.byKey(const Key('tombol-pengaturan')))
+        .height;
+    expect(tinggiTombol, greaterThanOrEqualTo(Ukuran.sentuh));
+
     await tester.tap(find.byKey(const Key('tombol-pengaturan')));
     await tester.pumpAndSettle();
 
@@ -174,33 +181,109 @@ void main() {
     expect(find.text('Toko Lama'), findsNothing);
   });
 
-  testWidgets('menawarkan melanjutkan keranjang bila draf belum kosong', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    await DrafRepository(prefs).simpan([
-      ItemBelanja(nama: 'Semen', qty: 3, satuan: 'sak', hargaSatuan: 65000),
-    ]);
+  testWidgets(
+    'menyimpan pengaturan memperbarui nama toko sampai ke struk pratinjau',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await ProfilRepository(
+        prefs,
+      ).simpan(const ProfilToko(namaToko: 'Toko Lama'));
 
-    await _pasang(tester, prefs);
+      await _pasang(tester, prefs);
 
-    final tombol = tester.widget<FilledButton>(
-      find.byKey(const Key('tombol-transaksi-baru-beranda')),
-    );
-    final teks = (tombol.child as Text).data!;
+      // Ubah nama toko lewat Pengaturan, seperti test di atas.
+      await tester.tap(find.byKey(const Key('tombol-pengaturan')));
+      await tester.pumpAndSettle();
+      final kolomNama = find.byKey(const Key('kolom-nama-toko'));
+      await tester.dragUntilVisible(
+        kolomNama,
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(kolomNama, 'Toko Baru Sejahtera');
+      await tester.pump();
+      final tombolSimpan = find.byKey(const Key('tombol-simpan-pengaturan'));
+      await tester.dragUntilVisible(
+        tombolSimpan,
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(tombolSimpan);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
 
-    expect(teks, isNot('TRANSAKSI BARU'));
-    expect(teks, contains('1 barang'));
-    expect(teks, contains('Rp 195.000'));
-  });
+      // Biarkan SnackBar 'Pengaturan tersimpan.' usai sepenuhnya — ia milik
+      // ScaffoldMessenger di akar MaterialApp, jadi kalau masih tampil ia
+      // menutupi tombol-kirim di layar Kasir/Pratinjau berikutnya.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
 
-  testWidgets('tidak meluap pada layar pendek 360x640', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
+      // Tempuh sampai Pratinjau: Kasir -> isi satu barang -> BUAT STRUK.
+      await tester.tap(find.byKey(const Key('tombol-transaksi-baru-beranda')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('kolom-nama')), 'Semen');
+      await tester.enterText(find.byKey(const Key('kolom-harga')), '65000');
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('tombol-tambah')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('tombol-kirim')));
+      await tester.pumpAndSettle();
 
-    await _pasang(tester, prefs, ukuran: const Size(360, 640));
+      expect(find.byType(LayarPratinjau), findsOneWidget);
+      // Nama toko yang baru harus sampai ke struk pembeli, bukan cuma
+      // terlihat di Beranda — profil basi berarti struk salah nama toko.
+      expect(
+        find.descendant(
+          of: find.byType(LayarPratinjau),
+          matching: find.textContaining('Toko Baru Sejahtera'),
+        ),
+        findsWidgets,
+      );
+    },
+  );
 
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'melanjutkan keranjang: label tombol utama tidak membungkus dan tombol '
+    'pengaturan tetap terjangkau di layar pendek 360x640',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await DrafRepository(prefs).simpan([
+        ItemBelanja(nama: 'Semen', qty: 3, satuan: 'sak', hargaSatuan: 65000),
+      ]);
+
+      await _pasang(tester, prefs, ukuran: const Size(360, 640));
+
+      final tombol = tester.widget<FilledButton>(
+        find.byKey(const Key('tombol-transaksi-baru-beranda')),
+      );
+      expect((tombol.child as Text).data, 'LANJUTKAN');
+
+      // Tinggi tombol tepat Ukuran.tombol membuktikan labelnya tidak
+      // membungkus dua baris (kalau membungkus, tombolnya akan tumbuh lebih
+      // tinggi dari lantai 56 ini).
+      final tinggiTombol = tester
+          .getSize(find.byKey(const Key('tombol-transaksi-baru-beranda')))
+          .height;
+      expect(tinggiTombol, moreOrLessEquals(Ukuran.tombol, epsilon: 0.5));
+
+      // Rincian jumlah barang dan totalnya tidak hilang — hanya dipindah
+      // keluar dari label tombol ke baris keterangan terpisah.
+      expect(find.textContaining('1 barang'), findsOneWidget);
+      expect(find.textContaining('Rp 195.000'), findsOneWidget);
+
+      // Tombol Pengaturan tetap terjangkau tanpa digulir, bahkan pada
+      // ponsel murah 360x640 — buktinya geometri (rect), bukan `find`.
+      final rectPengaturan = tester.getRect(
+        find.byKey(const Key('tombol-pengaturan')),
+      );
+      expect(rectPengaturan.bottom, lessThanOrEqualTo(640));
+
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

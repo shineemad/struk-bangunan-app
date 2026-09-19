@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:struk_bangunan/data/pengaturan_keluaran_repository.dart';
 import 'package:struk_bangunan/data/profil_repository.dart';
 import 'package:struk_bangunan/domain/profil_toko.dart';
+import 'package:struk_bangunan/ui/komponen/chip_satuan.dart';
 import 'package:struk_bangunan/ui/pengaturan/layar_pengaturan.dart';
 import 'package:struk_bangunan/ui/tema.dart';
 
@@ -92,6 +93,9 @@ void main() {
         lebarKertas: 80,
       ),
     );
+    await PengaturanKeluaranRepository(
+      prefs,
+    ).simpan(const PengaturanKeluaran(formatKiriman: FormatKiriman.pdf));
 
     await _pasang(tester, prefs);
 
@@ -100,6 +104,33 @@ void main() {
     expect(_isiKolom(tester, 'kolom-nohp'), '081234567890');
     expect(_isiKolom(tester, 'kolom-catatan'), 'Sampai jumpa lagi');
     expect(_isiKolom(tester, 'kolom-kasir'), 'Budi');
+
+    // Chip pilihan harus mencerminkan keadaan tersimpan, bukan cuma bawaan —
+    // lebar 80mm/PDF yang tidak tercermin di sini berarti struk berikutnya
+    // diam-diam kembali ke 58mm/PNG.
+    await tester.dragUntilVisible(
+      find.byKey(const Key('format-pdf')),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<ChipSatuan>(find.byKey(const Key('kertas-80'))).terpilih,
+      isTrue,
+    );
+    expect(
+      tester.widget<ChipSatuan>(find.byKey(const Key('kertas-58'))).terpilih,
+      isFalse,
+    );
+    expect(
+      tester.widget<ChipSatuan>(find.byKey(const Key('format-pdf'))).terpilih,
+      isTrue,
+    );
+    expect(
+      tester.widget<ChipSatuan>(find.byKey(const Key('format-png'))).terpilih,
+      isFalse,
+    );
   });
 
   testWidgets('tombol simpan nonaktif selama nama toko kosong', (tester) async {
