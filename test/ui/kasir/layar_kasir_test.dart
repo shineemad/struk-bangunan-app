@@ -326,6 +326,57 @@ void main() {
     }
   });
 
+  testWidgets('bilah TOTAL tidak tertimpa bilah navigasi sistem', (
+    tester,
+  ) async {
+    // Ditemukan di perangkat nyata (RMX3710, Android 15): tanpa SafeArea,
+    // tombol BUAT STRUK terpotong bilah navigasi. 48 dp meniru tinggi bilah
+    // itu; padding bawah hanya bisa dihormati lewat SafeArea.
+    const insetBawah = 48.0;
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.physicalSize = const Size(360, 780);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SharedPreferences.setMockInitialValues({});
+    final db = await bukaBasisdataUji();
+    await siapkanSkema(db);
+    addTearDown(db.close);
+    final prefs = await SharedPreferences.getInstance();
+    final keranjang = KeranjangController(
+      draf: DrafRepository(prefs),
+      transaksi: TransaksiRepository(db),
+      favorit: FavoritRepository(db),
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: keranjang),
+          ChangeNotifierProvider.value(
+            value: FavoritController(FavoritRepository(db)),
+          ),
+        ],
+        child: MaterialApp(
+          theme: temaTerang(),
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(padding: const EdgeInsets.only(bottom: insetBawah)),
+              child: LayarKasir(onKirim: () {}),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final rect = tester.getRect(find.byKey(const Key('tombol-kirim')));
+    expect(rect.bottom, lessThanOrEqualTo(780 - insetBawah));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('tombol tambah tetap terlihat pada skala font besar', (
     tester,
   ) async {

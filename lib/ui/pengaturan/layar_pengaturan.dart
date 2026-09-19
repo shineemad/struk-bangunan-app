@@ -116,100 +116,102 @@ class _LayarPengaturanState extends State<LayarPengaturan> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pengaturan')),
-      body: ListView(
-        padding: const EdgeInsets.all(Ukuran.jarak),
-        children: [
-          KolomIsian(
-            key: const Key('kolom-nama-toko'),
-            label: 'Nama toko',
-            controller: _nama,
-            hint: 'Toko Bangunan Jaya',
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 12),
-          KolomIsian(
-            key: const Key('kolom-alamat'),
-            label: 'Alamat',
-            controller: _alamat,
-            hint: 'Jl. Merdeka No. 10',
-          ),
-          const SizedBox(height: 12),
-          KolomIsian(
-            key: const Key('kolom-nohp'),
-            label: 'Nomor HP / WhatsApp',
-            controller: _noHp,
-            hint: '08123456789',
-          ),
-          const SizedBox(height: 12),
-          KolomIsian(
-            key: const Key('kolom-catatan'),
-            label: 'Pesan penutup struk',
-            controller: _catatan,
-            hint: 'Terima kasih telah berbelanja',
-          ),
-          const SizedBox(height: 12),
-          KolomIsian(
-            key: const Key('kolom-kasir'),
-            label: 'Nama kasir',
-            controller: _kasir,
-            hint: 'Opsional',
-          ),
-          const SizedBox(height: 20),
-          Text('Lebar kertas', style: labelBagian),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ChipSatuan(
-                key: const Key('kertas-58'),
-                satuan: '58 mm',
-                terpilih: _lebarKertas == 58,
-                onPilih: () => setState(() => _lebarKertas = 58),
-              ),
-              ChipSatuan(
-                key: const Key('kertas-80'),
-                satuan: '80 mm',
-                terpilih: _lebarKertas == 80,
-                onPilih: () => setState(() => _lebarKertas = 80),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text('Format kiriman WhatsApp', style: labelBagian),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ChipSatuan(
-                key: const Key('format-png'),
-                satuan: 'Gambar (PNG)',
-                terpilih: _formatKiriman == FormatKiriman.png,
-                onPilih: () =>
-                    setState(() => _formatKiriman = FormatKiriman.png),
-              ),
-              ChipSatuan(
-                key: const Key('format-pdf'),
-                satuan: 'Dokumen (PDF)',
-                terpilih: _formatKiriman == FormatKiriman.pdf,
-                onPilih: () =>
-                    setState(() => _formatKiriman = FormatKiriman.pdf),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'PNG langsung terlihat di WhatsApp. PDF cocok untuk diarsipkan.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 24),
-          FilledButton(
-            key: const Key('tombol-simpan-pengaturan'),
-            onPressed: _bolehSimpan ? _simpan : null,
-            child: const Text('SIMPAN'),
-          ),
-        ],
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(Ukuran.jarak),
+          children: [
+            KolomIsian(
+              key: const Key('kolom-nama-toko'),
+              label: 'Nama toko',
+              controller: _nama,
+              hint: 'Toko Bangunan Jaya',
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            KolomIsian(
+              key: const Key('kolom-alamat'),
+              label: 'Alamat',
+              controller: _alamat,
+              hint: 'Jl. Merdeka No. 10',
+            ),
+            const SizedBox(height: 12),
+            KolomIsian(
+              key: const Key('kolom-nohp'),
+              label: 'Nomor HP / WhatsApp',
+              controller: _noHp,
+              hint: '08123456789',
+            ),
+            const SizedBox(height: 12),
+            KolomIsian(
+              key: const Key('kolom-catatan'),
+              label: 'Pesan penutup struk',
+              controller: _catatan,
+              hint: 'Terima kasih telah berbelanja',
+            ),
+            const SizedBox(height: 12),
+            KolomIsian(
+              key: const Key('kolom-kasir'),
+              label: 'Nama kasir',
+              controller: _kasir,
+              hint: 'Opsional',
+            ),
+            const SizedBox(height: 20),
+            Text('Lebar kertas', style: labelBagian),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChipSatuan(
+                  key: const Key('kertas-58'),
+                  satuan: '58 mm',
+                  terpilih: _lebarKertas == 58,
+                  onPilih: () => setState(() => _lebarKertas = 58),
+                ),
+                ChipSatuan(
+                  key: const Key('kertas-80'),
+                  satuan: '80 mm',
+                  terpilih: _lebarKertas == 80,
+                  onPilih: () => setState(() => _lebarKertas = 80),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text('Format kiriman WhatsApp', style: labelBagian),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChipSatuan(
+                  key: const Key('format-png'),
+                  satuan: 'Gambar (PNG)',
+                  terpilih: _formatKiriman == FormatKiriman.png,
+                  onPilih: () =>
+                      setState(() => _formatKiriman = FormatKiriman.png),
+                ),
+                ChipSatuan(
+                  key: const Key('format-pdf'),
+                  satuan: 'Dokumen (PDF)',
+                  terpilih: _formatKiriman == FormatKiriman.pdf,
+                  onPilih: () =>
+                      setState(() => _formatKiriman = FormatKiriman.pdf),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'PNG langsung terlihat di WhatsApp. PDF cocok untuk diarsipkan.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              key: const Key('tombol-simpan-pengaturan'),
+              onPressed: _bolehSimpan ? _simpan : null,
+              child: const Text('SIMPAN'),
+            ),
+          ],
+        ),
       ),
     );
   }

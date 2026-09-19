@@ -109,59 +109,61 @@ class _LayarPratinjauState extends State<LayarPratinjau> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Struk')),
-      body: ListView(
-        padding: const EdgeInsets.all(Ukuran.jarak),
-        children: [
-          Center(
-            child: RepaintBoundary(
-              key: _kunciStruk,
-              child: ReceiptWidget(dokumen: dokumen, ukuranFont: 13),
-            ),
-          ),
-          const SizedBox(height: 24),
-          if (_tersimpan == null)
-            KolomIsian(
-              key: const Key('kolom-bayar'),
-              label: 'Uang dibayar (boleh dikosongkan)',
-              controller: _bayar,
-              hint: '0',
-              angka: true,
-              formatters: [FormatterRupiah()],
-              onChanged: (_) => setState(() {}),
-            ),
-          if (_tersimpan != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Tersimpan #${_tersimpan!.nomorNota}',
-                style: Theme.of(context).textTheme.titleMedium,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(Ukuran.jarak),
+          children: [
+            Center(
+              child: RepaintBoundary(
+                key: _kunciStruk,
+                child: ReceiptWidget(dokumen: dokumen, ukuranFont: 13),
               ),
             ),
-          const SizedBox(height: 16),
-          FilledButton(
-            key: const Key('tombol-kirim-wa'),
-            onPressed: _sibuk ? null : _kirimWa,
-            child: const Text('KIRIM WA'),
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            key: const Key('tombol-simpan'),
-            onPressed: _sibuk || _tersimpan != null ? null : _simpanSaja,
-            style: FilledButton.styleFrom(
-              backgroundColor: Warna.isian,
-              foregroundColor: Warna.teks,
+            const SizedBox(height: 24),
+            if (_tersimpan == null)
+              KolomIsian(
+                key: const Key('kolom-bayar'),
+                label: 'Uang dibayar (boleh dikosongkan)',
+                controller: _bayar,
+                hint: '0',
+                angka: true,
+                formatters: [FormatterRupiah()],
+                onChanged: (_) => setState(() {}),
+              ),
+            if (_tersimpan != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Tersimpan #${_tersimpan!.nomorNota}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            const SizedBox(height: 16),
+            FilledButton(
+              key: const Key('tombol-kirim-wa'),
+              onPressed: _sibuk ? null : _kirimWa,
+              child: const Text('KIRIM WA'),
             ),
-            child: const Text('SIMPAN SAJA'),
-          ),
-          if (_tersimpan != null) ...[
             const SizedBox(height: 12),
             FilledButton(
-              key: const Key('tombol-transaksi-baru'),
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('TRANSAKSI BARU'),
+              key: const Key('tombol-simpan'),
+              onPressed: _sibuk || _tersimpan != null ? null : _simpanSaja,
+              style: FilledButton.styleFrom(
+                backgroundColor: Warna.isian,
+                foregroundColor: Warna.teks,
+              ),
+              child: const Text('SIMPAN SAJA'),
             ),
+            if (_tersimpan != null) ...[
+              const SizedBox(height: 12),
+              FilledButton(
+                key: const Key('tombol-transaksi-baru'),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('TRANSAKSI BARU'),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
