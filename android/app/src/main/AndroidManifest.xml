@@ -4,7 +4,7 @@
          menimbulkan kecurigaan. Lihat src/release/AndroidManifest.xml. -->
 
     <application
-        android:label="struk_bangunan"
+        android:label="Notaku"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

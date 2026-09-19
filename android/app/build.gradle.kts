@@ -1,9 +1,21 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Kunci rilis dibaca dari android/key.properties, yang sengaja TIDAK masuk git
+// (lihat .gitignore). Selama berkas itu belum ada, build rilis jatuh ke kunci
+// debug supaya `flutter build apk --release` tetap jalan untuk uji coba.
+val berkasKunci = rootProject.file("key.properties")
+val kunciRilis = Properties().apply {
+    if (berkasKunci.exists()) berkasKunci.inputStream().use { load(it) }
+}
+val pakaiKunciRilis = berkasKunci.exists() &&
+    kunciRilis.getProperty("storeFile") != null
 
 android {
     namespace = "com.shineemad.struk_bangunan"
@@ -30,11 +42,24 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (pakaiKunciRilis) {
+            create("release") {
+                storeFile = file(kunciRilis.getProperty("storeFile"))
+                storePassword = kunciRilis.getProperty("storePassword")
+                keyAlias = kunciRilis.getProperty("keyAlias")
+                keyPassword = kunciRilis.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (pakaiKunciRilis) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

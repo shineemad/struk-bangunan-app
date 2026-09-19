@@ -15,6 +15,49 @@ const _izinDariPlugin = [
 String _baca(String jalur) => File(jalur).readAsStringSync();
 
 void main() {
+  test('aplikasi bernama Notaku, bukan nama paket Flutter', () {
+    // Nama yang terlihat di layar peluncur. `struk_bangunan` adalah nama paket
+    // Dart bawaan `flutter create` dan tidak pernah pantas dilihat pengguna.
+    expect(
+      _baca('android/app/src/main/AndroidManifest.xml'),
+      contains('android:label="Notaku"'),
+    );
+  });
+
+  test('ikon peluncur punya varian adaptif dan lawas', () {
+    // Adaptif untuk Android 8+, PNG untuk 24-25 yang belum mendukungnya.
+    expect(
+      File(
+        'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml',
+      ).existsSync(),
+      isTrue,
+    );
+    for (final kepadatan in ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+      expect(
+        File(
+          'android/app/src/main/res/mipmap-$kepadatan/ic_launcher.png',
+        ).existsSync(),
+        isTrue,
+        reason: 'ikon lawas $kepadatan hilang',
+      );
+    }
+  });
+
+  test('build rilis tidak memakai kunci debug bila kunci rilis tersedia', () {
+    // TODO bawaan `flutter create` menandatangani rilis dengan kunci debug,
+    // yang ditolak Play Store. Sekarang kunci debug hanya dipakai sebagai
+    // cadangan selama `key.properties` belum dibuat.
+    final gradle = _baca('android/app/build.gradle.kts');
+
+    expect(gradle, contains('key.properties'));
+    expect(gradle, contains('signingConfigs.getByName("release")'));
+    expect(
+      gradle,
+      isNot(contains('// TODO: Add your own signing config')),
+      reason: 'TODO bawaan flutter create masih ada',
+    );
+  });
+
   test('manifest main tidak meminta izin apa pun', () {
     // Fitur cetak ditunda, jadi tidak ada satu pun izin yang punya pemakai.
     expect(

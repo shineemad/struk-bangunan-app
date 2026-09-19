@@ -60,7 +60,7 @@ class AplikasiStruk extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FavoritController(wadah.favorit)),
       ],
       child: MaterialApp(
-        title: 'StrukBangunan',
+        title: 'Notaku',
         debugShowCheckedModeBanner: false,
         theme: temaTerang(),
         home: LayarBeranda(
