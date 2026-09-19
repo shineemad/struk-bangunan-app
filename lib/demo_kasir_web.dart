@@ -19,8 +19,10 @@ import 'data/profil_repository.dart';
 import 'data/transaksi_repository.dart';
 import 'domain/transaksi.dart';
 import 'output/png_renderer.dart';
+import 'output/share_service.dart';
 import 'state/favorit_controller.dart';
 import 'state/keranjang_controller.dart';
+import 'state/pencadang.dart';
 import 'state/pengirim_struk.dart';
 import 'ui/beranda/layar_beranda.dart';
 import 'ui/tema.dart';
@@ -124,6 +126,7 @@ class _DemoState extends State<_Demo> {
           pengaturan: PengaturanKeluaranRepository(widget.prefs),
           transaksi: _TransaksiDemo(_db),
           pengirim: _PengirimDemo(_lapor),
+          pencadang: _PencadangDemo(_lapor),
         ),
       ),
     );
@@ -238,6 +241,23 @@ class _PengirimDemo implements PengirimStrukKontrak {
       'Struk #${nota.nomorNota} dirender ${(png.lengthInBytes / 1024).round()} KB. '
       'Berbagi ke WhatsApp hanya jalan di Android.',
     );
+  }
+}
+
+/// Melaporkan lewat `_lapor` alih-alih menyentuh `_DbPalsu` \u2014 `BackupService`
+/// sungguhan akan meledak begitu membaca tabel `meta`/`transaksi`.
+class _PencadangDemo implements PencadangKontrak {
+  _PencadangDemo(this._lapor);
+
+  final void Function(String teks) _lapor;
+
+  @override
+  Future<String> cadangkan(DateTime sekarang) async {
+    final nama = namaBerkasCadangan(sekarang);
+    _lapor(
+      'Cadangan $nama dibuat. Berbagi ke WhatsApp hanya jalan di Android.',
+    );
+    return nama;
   }
 }
 

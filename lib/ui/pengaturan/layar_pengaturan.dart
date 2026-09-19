@@ -1,8 +1,11 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/material.dart';
 
 import '../../data/pengaturan_keluaran_repository.dart';
 import '../../data/profil_repository.dart';
 import '../../domain/profil_toko.dart';
+import '../../state/pencadang.dart';
 import '../komponen/chip_satuan.dart';
 import '../komponen/isian.dart';
 import '../tema.dart';
@@ -10,6 +13,7 @@ import '../tema.dart';
 class LayarPengaturan extends StatefulWidget {
   final ProfilRepository profil;
   final PengaturanKeluaranRepository pengaturan;
+  final PencadangKontrak pencadang;
 
   /// Dipanggil setelah simpan sukses, supaya layar pemanggil bisa
   /// menyegarkan profil yang dipakainya.
@@ -19,6 +23,7 @@ class LayarPengaturan extends StatefulWidget {
     super.key,
     required this.profil,
     required this.pengaturan,
+    required this.pencadang,
     this.onTersimpan,
   });
 
@@ -42,6 +47,7 @@ class _LayarPengaturanState extends State<LayarPengaturan> {
   String _printerNama = '';
 
   bool _sedangMemuat = true;
+  bool _sedangCadangkan = false;
 
   @override
   void initState() {
@@ -101,6 +107,32 @@ class _LayarPengaturanState extends State<LayarPengaturan> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Pengaturan tersimpan.')));
+  }
+
+  /// Kegagalan membagikan berkas tidak boleh mengunci layar — sama seperti
+  /// `_kirimWa` di `LayarPratinjau`.
+  Future<void> _cadangkan() async {
+    setState(() => _sedangCadangkan = true);
+    try {
+      final nama = await widget.pencadang.cadangkan(DateTime.now());
+      if (!mounted) return;
+      setState(() => _sedangCadangkan = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Cadangan tersimpan: $nama')));
+    } catch (galat, jejak) {
+      dev.log(
+        'cadangkan gagal karena galat tak terduga',
+        name: 'LayarPengaturan',
+        error: galat,
+        stackTrace: jejak,
+      );
+      if (!mounted) return;
+      setState(() => _sedangCadangkan = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal mencadangkan data. Coba lagi.')),
+      );
+    }
   }
 
   @override
@@ -209,6 +241,21 @@ class _LayarPengaturanState extends State<LayarPengaturan> {
               key: const Key('tombol-simpan-pengaturan'),
               onPressed: _bolehSimpan ? _simpan : null,
               child: const Text('SIMPAN'),
+            ),
+            const SizedBox(height: 32),
+            Text('Cadangkan data', style: labelBagian),
+            const SizedBox(height: 8),
+            Text(
+              'Data toko ini hanya tersimpan di HP ini dan akan hilang bila '
+              'aplikasi dihapus. Simpan berkas cadangan ke WhatsApp atau '
+              'Google Drive secara berkala agar data penjualan tetap aman.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              key: const Key('tombol-cadangkan'),
+              onPressed: _sedangCadangkan ? null : _cadangkan,
+              child: const Text('CADANGKAN DATA'),
             ),
           ],
         ),

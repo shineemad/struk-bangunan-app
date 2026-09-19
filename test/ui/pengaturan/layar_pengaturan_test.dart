@@ -4,14 +4,32 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:struk_bangunan/data/pengaturan_keluaran_repository.dart';
 import 'package:struk_bangunan/data/profil_repository.dart';
 import 'package:struk_bangunan/domain/profil_toko.dart';
+import 'package:struk_bangunan/state/pencadang.dart';
 import 'package:struk_bangunan/ui/komponen/chip_satuan.dart';
 import 'package:struk_bangunan/ui/pengaturan/layar_pengaturan.dart';
 import 'package:struk_bangunan/ui/tema.dart';
+
+class _PencadangPalsu implements PencadangKontrak {
+  _PencadangPalsu({
+    this.nama = 'strukbangunan-backup-20260919.json',
+    this.galat,
+  });
+
+  final String nama;
+  final Object? galat;
+
+  @override
+  Future<String> cadangkan(DateTime sekarang) async {
+    if (galat != null) throw galat!;
+    return nama;
+  }
+}
 
 Future<void> _pasang(
   WidgetTester tester,
   SharedPreferences prefs, {
   VoidCallback? onTersimpan,
+  PencadangKontrak? pencadang,
 }) async {
   // Layar ini panjang (5 kolom + 2 kelompok pilihan); viewport uji bawaan
   // 800x600 tidak merepresentasikan ponsel yang jadi target aplikasi ini.
@@ -26,6 +44,7 @@ Future<void> _pasang(
       home: LayarPengaturan(
         profil: ProfilRepository(prefs),
         pengaturan: PengaturanKeluaranRepository(prefs),
+        pencadang: pencadang ?? _PencadangPalsu(),
         onTersimpan: onTersimpan,
       ),
     ),
@@ -261,5 +280,47 @@ void main() {
     await _tekan(tester, 'tombol-simpan-pengaturan');
 
     expect(dipanggil, isTrue);
+  });
+
+  testWidgets(
+    'menekan cadangkan memanggil pencadang dan menampilkan nama berkasnya',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await _pasang(
+        tester,
+        prefs,
+        pencadang: _PencadangPalsu(nama: 'strukbangunan-backup-20260919.json'),
+      );
+
+      await _tekan(tester, 'tombol-cadangkan');
+
+      expect(
+        find.textContaining('strukbangunan-backup-20260919.json'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('pencadangan yang gagal tidak mengunci layar', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await _pasang(
+      tester,
+      prefs,
+      pencadang: _PencadangPalsu(galat: Exception('gagal terduga')),
+    );
+
+    await _tekan(tester, 'tombol-cadangkan');
+
+    expect(find.textContaining('Gagal mencadangkan'), findsOneWidget);
+    final target = find.byKey(const Key('tombol-cadangkan'));
+    await tester.dragUntilVisible(
+      target,
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(target).onPressed, isNotNull);
   });
 }

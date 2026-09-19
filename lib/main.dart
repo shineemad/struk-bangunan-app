@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'app/wadah.dart';
+import 'data/backup_service.dart';
 import 'output/share_service.dart';
 import 'state/favorit_controller.dart';
 import 'state/keranjang_controller.dart';
+import 'state/pencadang.dart';
 import 'state/pengirim_struk.dart';
 import 'ui/beranda/layar_beranda.dart';
 import 'ui/tema.dart';
@@ -20,6 +22,10 @@ Future<void> main() async {
         wadah.pengaturan,
         ShareService(await berkasSementaraCache()),
       ),
+      pencadang: Pencadang(
+        BackupService(wadah.db, wadah.profil, wadah.pengaturan),
+        ShareService(await berkasSementaraCache()),
+      ),
     ),
   );
 }
@@ -27,8 +33,14 @@ Future<void> main() async {
 class AplikasiStruk extends StatelessWidget {
   final Wadah wadah;
   final PengirimStrukKontrak pengirim;
+  final PencadangKontrak pencadang;
 
-  const AplikasiStruk({super.key, required this.wadah, required this.pengirim});
+  const AplikasiStruk({
+    super.key,
+    required this.wadah,
+    required this.pengirim,
+    required this.pencadang,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +68,7 @@ class AplikasiStruk extends StatelessWidget {
           pengaturan: wadah.pengaturan,
           transaksi: wadah.transaksi,
           pengirim: pengirim,
+          pencadang: pencadang,
         ),
       ),
     );

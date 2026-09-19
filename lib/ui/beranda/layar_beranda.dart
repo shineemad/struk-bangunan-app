@@ -7,6 +7,7 @@ import '../../data/transaksi_repository.dart';
 import '../../domain/profil_toko.dart';
 import '../../domain/uang.dart';
 import '../../state/keranjang_controller.dart';
+import '../../state/pencadang.dart';
 import '../../state/pengirim_struk.dart';
 import '../kasir/layar_kasir.dart';
 import '../pengaturan/layar_pengaturan.dart';
@@ -25,6 +26,7 @@ class LayarBeranda extends StatefulWidget {
   final PengaturanKeluaranRepository pengaturan;
   final TransaksiRepository transaksi;
   final PengirimStrukKontrak pengirim;
+  final PencadangKontrak pencadang;
 
   const LayarBeranda({
     super.key,
@@ -32,6 +34,7 @@ class LayarBeranda extends StatefulWidget {
     required this.pengaturan,
     required this.transaksi,
     required this.pengirim,
+    required this.pencadang,
   });
 
   @override
@@ -101,6 +104,7 @@ class _LayarBerandaState extends State<LayarBeranda> {
         builder: (_) => LayarPengaturan(
           profil: widget.profil,
           pengaturan: widget.pengaturan,
+          pencadang: widget.pencadang,
           // Nama toko yang baru harus langsung terlihat di sini, dan struk
           // berikutnya harus memakai profil baru — profil yang basi berarti
           // struk pembeli mencetak nama toko yang salah.

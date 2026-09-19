@@ -13,6 +13,7 @@ import 'package:struk_bangunan/domain/profil_toko.dart';
 import 'package:struk_bangunan/domain/transaksi.dart';
 import 'package:struk_bangunan/state/favorit_controller.dart';
 import 'package:struk_bangunan/state/keranjang_controller.dart';
+import 'package:struk_bangunan/state/pencadang.dart';
 import 'package:struk_bangunan/state/pengirim_struk.dart';
 import 'package:struk_bangunan/ui/beranda/layar_beranda.dart';
 import 'package:struk_bangunan/ui/kasir/layar_kasir.dart';
@@ -31,6 +32,13 @@ class _PengirimPalsu implements PengirimStrukKontrak {
     required Transaksi nota,
     required int lebarKolom,
   }) async {}
+}
+
+/// Tidak melakukan apa-apa: test di berkas ini tidak pernah menekan tombol
+/// cadangkan, tapi konstruktor `LayarBeranda` mewajibkan pencadang.
+class _PencadangPalsu implements PencadangKontrak {
+  @override
+  Future<String> cadangkan(DateTime sekarang) async => 'tidak-dipakai.json';
 }
 
 Future<void> _pasang(
@@ -83,6 +91,7 @@ Future<void> _pasang(
           pengaturan: PengaturanKeluaranRepository(prefs),
           transaksi: TransaksiRepository(db),
           pengirim: _PengirimPalsu(),
+          pencadang: _PencadangPalsu(),
         ),
       ),
     ),
