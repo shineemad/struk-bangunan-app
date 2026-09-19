@@ -11,7 +11,7 @@ const int versiBackup = 2;
 /// Batas ukuran berkas cadangan: 16 MiB dalam kode-unit, sesuai spec bagian 4
 /// (berkas berasal dari luar aplikasi, jadi ukurannya harus dibatasi sebelum
 /// diuraikan).
-const int _batasUkuranBerkasCadangan = 16 * 1024 * 1024;
+const int batasUkuranBerkasCadangan = 16 * 1024 * 1024;
 
 class BackupRusak implements Exception {
   final String pesan;
@@ -53,7 +53,7 @@ class BackupService {
   /// Validasi selesai sepenuhnya sebelum satu baris pun dihapus, sehingga
   /// berkas yang cacat tidak pernah merusak data yang sedang dipakai.
   Future<void> impor(String teks) async {
-    if (teks.length > _batasUkuranBerkasCadangan) {
+    if (teks.length > batasUkuranBerkasCadangan) {
       throw const BackupRusak(
         'Berkas cadangan melebihi batas ukuran yang diizinkan.',
       );

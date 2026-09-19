@@ -58,6 +58,24 @@ void main() {
     );
   });
 
+  test('layar peluncuran tidak pernah berkedip hitam di HP bermode gelap', () {
+    // `?android:colorBackground` ikut mode gelap sistem, sedangkan aplikasi
+    // ini selalu terang — nilainya harus dipakukan di keempat berkas.
+    const berkas = [
+      'android/app/src/main/res/drawable/launch_background.xml',
+      'android/app/src/main/res/drawable-v21/launch_background.xml',
+      'android/app/src/main/res/values/styles.xml',
+      'android/app/src/main/res/values-night/styles.xml',
+    ];
+    for (final jalur in berkas) {
+      expect(
+        _baca(jalur),
+        isNot(contains('?android:colorBackground')),
+        reason: '$jalur masih mengikuti mode gelap sistem',
+      );
+    }
+  });
+
   test('manifest main tidak meminta izin apa pun', () {
     // Fitur cetak ditunda, jadi tidak ada satu pun izin yang punya pemakai.
     expect(

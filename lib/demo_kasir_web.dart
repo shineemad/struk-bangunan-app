@@ -22,6 +22,7 @@ import 'output/png_renderer.dart';
 import 'output/share_service.dart';
 import 'state/favorit_controller.dart';
 import 'state/keranjang_controller.dart';
+import 'state/pemulih.dart';
 import 'state/pencadang.dart';
 import 'state/pengirim_struk.dart';
 import 'ui/beranda/layar_beranda.dart';
@@ -105,7 +106,7 @@ class _DemoState extends State<_Demo> {
         ChangeNotifierProvider<FavoritController>.value(value: _favorit),
       ],
       child: MaterialApp(
-        title: 'StrukBangunan — pratinjau web',
+        title: 'Notaku — pratinjau web',
         debugShowCheckedModeBanner: false,
         scaffoldMessengerKey: _pesan,
         theme: temaTerang(),
@@ -127,6 +128,7 @@ class _DemoState extends State<_Demo> {
           transaksi: _TransaksiDemo(_db),
           pengirim: _PengirimDemo(_lapor),
           pencadang: _PencadangDemo(_lapor),
+          pemulih: _PemulihDemo(_lapor),
         ),
       ),
     );
@@ -258,6 +260,20 @@ class _PencadangDemo implements PencadangKontrak {
       'Cadangan $nama dibuat. Berbagi ke WhatsApp hanya jalan di Android.',
     );
     return nama;
+  }
+}
+
+/// Pemilih berkas bawaan sistem tidak ada di pratinjau web, dan menimpa basis
+/// data palsu juga mustahil — jadi ia berlaku seolah pengguna membatalkan.
+class _PemulihDemo implements PemulihKontrak {
+  _PemulihDemo(this._lapor);
+
+  final void Function(String teks) _lapor;
+
+  @override
+  Future<bool> pulihkan() async {
+    _lapor('Memulihkan cadangan hanya jalan di Android.');
+    return false;
   }
 }
 

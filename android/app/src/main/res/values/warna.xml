@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sama dengan Warna.latar di lib/ui/tema.dart. Dipakukan, bukan memakai
+         ?android:colorBackground: di HP bermode gelap nilai itu menjadi hitam,
+         sehingga layar berkedip hitam sebelum aplikasi yang terang muncul. -->
+    <color name="notaku_latar">#F8FAFC</color>
+</resources>

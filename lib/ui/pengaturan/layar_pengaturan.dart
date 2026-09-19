@@ -2,9 +2,11 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 
+import '../../data/backup_service.dart';
 import '../../data/pengaturan_keluaran_repository.dart';
 import '../../data/profil_repository.dart';
 import '../../domain/profil_toko.dart';
+import '../../state/pemulih.dart';
 import '../../state/pencadang.dart';
 import '../komponen/chip_satuan.dart';
 import '../komponen/isian.dart';
@@ -14,9 +16,10 @@ class LayarPengaturan extends StatefulWidget {
   final ProfilRepository profil;
   final PengaturanKeluaranRepository pengaturan;
   final PencadangKontrak pencadang;
+  final PemulihKontrak pemulih;
 
-  /// Dipanggil setelah simpan sukses, supaya layar pemanggil bisa
-  /// menyegarkan profil yang dipakainya.
+  /// Dipanggil setelah simpan atau pemulihan sukses, supaya layar pemanggil
+  /// bisa menyegarkan data yang dipakainya.
   final VoidCallback? onTersimpan;
 
   const LayarPengaturan({
@@ -24,6 +27,7 @@ class LayarPengaturan extends StatefulWidget {
     required this.profil,
     required this.pengaturan,
     required this.pencadang,
+    required this.pemulih,
     this.onTersimpan,
   });
 
@@ -48,6 +52,7 @@ class _LayarPengaturanState extends State<LayarPengaturan> {
 
   bool _sedangMemuat = true;
   bool _sedangCadangkan = false;
+  bool _sedangPulihkan = false;
 
   @override
   void initState() {
@@ -65,6 +70,11 @@ class _LayarPengaturanState extends State<LayarPengaturan> {
       _catatan.text = profil.catatan;
       _kasir.text = profil.namaKasir;
       _lebarKertas = profil.lebarKertas;
+    } else {
+      // Cadangan bisa berasal dari pemasangan yang belum pernah diatur.
+      for (final kolom in [_nama, _alamat, _noHp, _catatan, _kasir]) {
+        kolom.clear();
+      }
     }
     _formatKiriman = pengaturan.formatKiriman;
     _printerMac = pengaturan.printerMac;
@@ -131,6 +141,72 @@ class _LayarPengaturanState extends State<LayarPengaturan> {
       setState(() => _sedangCadangkan = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Gagal mencadangkan data. Coba lagi.')),
+      );
+    }
+  }
+
+  /// Memulihkan MENIMPA seluruh data yang ada, jadi ia selalu lewat
+  /// konfirmasi lebih dulu. `BackupService.impor` sudah memvalidasi berkas
+  /// sampai tuntas sebelum menghapus satu baris pun, sehingga berkas yang
+  /// cacat meninggalkan data lama utuh.
+  Future<void> _pulihkan() async {
+    final lanjut = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Pulihkan data?'),
+        content: const Text(
+          'Seluruh penjualan, barang favorit, dan pengaturan yang ada di HP '
+          'ini akan DIGANTI oleh isi berkas cadangan. Data yang sekarang '
+          'tidak bisa dikembalikan lagi.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('batal-pulihkan'),
+            onPressed: () => Navigator.of(dialog).pop(false),
+            child: const Text('BATAL'),
+          ),
+          TextButton(
+            key: const Key('ya-pulihkan'),
+            onPressed: () => Navigator.of(dialog).pop(true),
+            child: const Text('PILIH BERKAS'),
+          ),
+        ],
+      ),
+    );
+    if (lanjut != true || !mounted) return;
+
+    setState(() => _sedangPulihkan = true);
+    try {
+      final dipulihkan = await widget.pemulih.pulihkan();
+      if (!mounted) return;
+      setState(() => _sedangPulihkan = false);
+      // Pengguna menutup pemilih berkas: bukan kegagalan, jadi tidak ada
+      // pesan galat yang perlu ditampilkan.
+      if (!dipulihkan) return;
+      // Kolom di layar ini masih memegang profil lama sampai dimuat ulang.
+      await _muat();
+      widget.onTersimpan?.call();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Data berhasil dipulihkan.')),
+      );
+    } on BackupRusak catch (galat) {
+      if (!mounted) return;
+      setState(() => _sedangPulihkan = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(galat.pesan)));
+    } catch (galat, jejak) {
+      dev.log(
+        'pulihkan gagal karena galat tak terduga',
+        name: 'LayarPengaturan',
+        error: galat,
+        stackTrace: jejak,
+      );
+      if (!mounted) return;
+      setState(() => _sedangPulihkan = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal memulihkan data. Coba lagi.')),
       );
     }
   }
@@ -256,6 +332,26 @@ class _LayarPengaturanState extends State<LayarPengaturan> {
               key: const Key('tombol-cadangkan'),
               onPressed: _sedangCadangkan ? null : _cadangkan,
               child: const Text('CADANGKAN DATA'),
+            ),
+            const SizedBox(height: 32),
+            Text('Pulihkan data', style: labelBagian),
+            const SizedBox(height: 8),
+            Text(
+              'Pakai ini saat ganti HP atau setelah aplikasi dipasang ulang. '
+              'Pilih berkas cadangan yang pernah Anda simpan. Data yang ada '
+              'di HP ini sekarang akan diganti.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              key: const Key('tombol-pulihkan'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(Ukuran.tombol),
+                side: const BorderSide(color: Warna.garis),
+                foregroundColor: Warna.teks,
+              ),
+              onPressed: _sedangPulihkan ? null : _pulihkan,
+              child: const Text('PULIHKAN DARI CADANGAN'),
             ),
           ],
         ),

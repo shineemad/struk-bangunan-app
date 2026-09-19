@@ -24,7 +24,7 @@ class Pencadang implements PencadangKontrak {
     await _berbagi.bagikan(
       nama: nama,
       isi: utf8.encode(isi),
-      teks: 'Cadangan data StrukBangunan',
+      teks: 'Cadangan data Notaku',
     );
     return nama;
   }

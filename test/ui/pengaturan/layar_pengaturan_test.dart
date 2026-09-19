@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:struk_bangunan/data/backup_service.dart';
 import 'package:struk_bangunan/data/pengaturan_keluaran_repository.dart';
 import 'package:struk_bangunan/data/profil_repository.dart';
 import 'package:struk_bangunan/domain/profil_toko.dart';
+import 'package:struk_bangunan/state/pemulih.dart';
 import 'package:struk_bangunan/state/pencadang.dart';
 import 'package:struk_bangunan/ui/komponen/chip_satuan.dart';
 import 'package:struk_bangunan/ui/pengaturan/layar_pengaturan.dart';
@@ -25,11 +27,32 @@ class _PencadangPalsu implements PencadangKontrak {
   }
 }
 
+class _PemulihPalsu implements PemulihKontrak {
+  _PemulihPalsu({this.hasil = true, this.galat, this.sebelumKembali});
+
+  final bool hasil;
+  final Object? galat;
+
+  /// Dipakai test untuk meniru efek pemulihan pada data di balik layar.
+  final Future<void> Function()? sebelumKembali;
+
+  int dipanggil = 0;
+
+  @override
+  Future<bool> pulihkan() async {
+    dipanggil++;
+    if (galat != null) throw galat!;
+    await sebelumKembali?.call();
+    return hasil;
+  }
+}
+
 Future<void> _pasang(
   WidgetTester tester,
   SharedPreferences prefs, {
   VoidCallback? onTersimpan,
   PencadangKontrak? pencadang,
+  PemulihKontrak? pemulih,
 }) async {
   // Layar ini panjang (5 kolom + 2 kelompok pilihan); viewport uji bawaan
   // 800x600 tidak merepresentasikan ponsel yang jadi target aplikasi ini.
@@ -45,6 +68,7 @@ Future<void> _pasang(
         profil: ProfilRepository(prefs),
         pengaturan: PengaturanKeluaranRepository(prefs),
         pencadang: pencadang ?? _PencadangPalsu(),
+        pemulih: pemulih ?? _PemulihPalsu(),
         onTersimpan: onTersimpan,
       ),
     ),
@@ -127,8 +151,12 @@ void main() {
     // Chip pilihan harus mencerminkan keadaan tersimpan, bukan cuma bawaan —
     // lebar 80mm/PDF yang tidak tercermin di sini berarti struk berikutnya
     // diam-diam kembali ke 58mm/PNG.
+    //
+    // Diperiksa dua tahap: menggulir sampai `format-pdf` membuang chip kertas
+    // dari pohon widget, sehingga keduanya tidak bisa dibaca dalam satu posisi
+    // gulir yang sama.
     await tester.dragUntilVisible(
-      find.byKey(const Key('format-pdf')),
+      find.byKey(const Key('kertas-80')),
       find.byType(ListView),
       const Offset(0, -200),
     );
@@ -142,6 +170,14 @@ void main() {
       tester.widget<ChipSatuan>(find.byKey(const Key('kertas-58'))).terpilih,
       isFalse,
     );
+
+    await tester.dragUntilVisible(
+      find.byKey(const Key('format-pdf')),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+
     expect(
       tester.widget<ChipSatuan>(find.byKey(const Key('format-pdf'))).terpilih,
       isTrue,
@@ -322,5 +358,145 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.widget<FilledButton>(target).onPressed, isNotNull);
+  });
+
+  testWidgets('memulihkan selalu lewat konfirmasi lebih dulu', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final pemulih = _PemulihPalsu();
+    await _pasang(tester, prefs, pemulih: pemulih);
+
+    await _tekan(tester, 'tombol-pulihkan');
+
+    // Berkas belum boleh diminta sebelum pengguna menyatakan setuju: menimpa
+    // data karena salah tekan tidak bisa dibatalkan.
+    expect(pemulih.dipanggil, 0);
+    expect(find.text('Pulihkan data?'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('batal-pulihkan')));
+    await tester.pumpAndSettle();
+
+    expect(pemulih.dipanggil, 0);
+  });
+
+  testWidgets('pemulihan sukses memuat ulang kolom dan memberi tahu beranda', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await ProfilRepository(
+      prefs,
+    ).simpan(const ProfilToko(namaToko: 'Toko Lama'));
+    var diberiTahu = false;
+
+    await _pasang(
+      tester,
+      prefs,
+      onTersimpan: () => diberiTahu = true,
+      // Meniru pemulihan sungguhan: profil di penyimpanan sudah berganti
+      // ketika `pulihkan()` selesai.
+      pemulih: _PemulihPalsu(
+        sebelumKembali: () => ProfilRepository(
+          prefs,
+        ).simpan(const ProfilToko(namaToko: 'Toko Hasil Pulih')),
+      ),
+    );
+
+    expect(_isiKolom(tester, 'kolom-nama-toko'), 'Toko Lama');
+
+    await _tekan(tester, 'tombol-pulihkan');
+    await tester.tap(find.byKey(const Key('ya-pulihkan')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Data berhasil dipulihkan.'), findsOneWidget);
+
+    // Kembali ke puncak: menggulir ke tombol pulihkan membuang kolom nama
+    // toko dari pohon widget.
+    await tester.dragUntilVisible(
+      find.byKey(const Key('kolom-nama-toko')),
+      find.byType(ListView),
+      const Offset(0, 200),
+    );
+    await tester.pumpAndSettle();
+
+    // Kolom yang basi akan menyimpan balik profil lama begitu pengguna
+    // menekan SIMPAN, diam-diam membatalkan pemulihannya.
+    expect(_isiKolom(tester, 'kolom-nama-toko'), 'Toko Hasil Pulih');
+    expect(diberiTahu, isTrue);
+  });
+
+  testWidgets('berkas cadangan yang rusak menampilkan pesannya sendiri', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    var diberiTahu = false;
+
+    await _pasang(
+      tester,
+      prefs,
+      onTersimpan: () => diberiTahu = true,
+      pemulih: _PemulihPalsu(
+        galat: const BackupRusak('Berkas cadangan tidak memuat bagian "meta".'),
+      ),
+    );
+
+    await _tekan(tester, 'tombol-pulihkan');
+    await tester.tap(find.byKey(const Key('ya-pulihkan')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Berkas cadangan tidak memuat bagian "meta".'),
+      findsOneWidget,
+    );
+    expect(diberiTahu, isFalse);
+  });
+
+  testWidgets('pemulihan yang gagal tidak mengunci layar', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pasang(
+      tester,
+      prefs,
+      pemulih: _PemulihPalsu(galat: Exception('gagal terduga')),
+    );
+
+    await _tekan(tester, 'tombol-pulihkan');
+    await tester.tap(find.byKey(const Key('ya-pulihkan')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Gagal memulihkan'), findsOneWidget);
+    final target = find.byKey(const Key('tombol-pulihkan'));
+    await tester.dragUntilVisible(
+      target,
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<OutlinedButton>(target).onPressed, isNotNull);
+  });
+
+  testWidgets('membatalkan pemilih berkas tidak memberi kabar apa pun', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    var diberiTahu = false;
+
+    await _pasang(
+      tester,
+      prefs,
+      onTersimpan: () => diberiTahu = true,
+      pemulih: _PemulihPalsu(hasil: false),
+    );
+
+    await _tekan(tester, 'tombol-pulihkan');
+    await tester.tap(find.byKey(const Key('ya-pulihkan')));
+    await tester.pumpAndSettle();
+
+    // Menutup pemilih berkas adalah keputusan sadar, bukan kegagalan.
+    expect(find.byType(SnackBar), findsNothing);
+    expect(diberiTahu, isFalse);
   });
 }

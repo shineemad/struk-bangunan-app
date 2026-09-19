@@ -6,16 +6,20 @@ import '../../data/profil_repository.dart';
 import '../../data/transaksi_repository.dart';
 import '../../domain/profil_toko.dart';
 import '../../domain/uang.dart';
+import '../../state/favorit_controller.dart';
 import '../../state/keranjang_controller.dart';
+import '../../state/pemulih.dart';
 import '../../state/pencadang.dart';
 import '../../state/pengirim_struk.dart';
 import '../kasir/layar_kasir.dart';
+import '../onboarding/layar_onboarding.dart';
 import '../pengaturan/layar_pengaturan.dart';
 import '../struk/layar_pratinjau.dart';
 import '../tema.dart';
 
-/// Onboarding milik Rencana 5; sampai itu ada, toko yang belum pernah diatur
-/// memakai nama ini.
+/// Dipakai hanya sebagai jaring pengaman bila profil raib setelah onboarding
+/// (misalnya cadangan lama yang tidak memuat profil) — struk tanpa nama toko
+/// lebih buruk daripada nama umum ini.
 const _profilBawaan = ProfilToko(namaToko: 'TOKO BANGUNAN');
 
 /// Pusat navigasi aplikasi: memegang profil toko yang sedang berlaku, lalu
@@ -27,6 +31,7 @@ class LayarBeranda extends StatefulWidget {
   final TransaksiRepository transaksi;
   final PengirimStrukKontrak pengirim;
   final PencadangKontrak pencadang;
+  final PemulihKontrak pemulih;
 
   const LayarBeranda({
     super.key,
@@ -35,6 +40,7 @@ class LayarBeranda extends StatefulWidget {
     required this.transaksi,
     required this.pengirim,
     required this.pencadang,
+    required this.pemulih,
   });
 
   @override
@@ -44,6 +50,7 @@ class LayarBeranda extends StatefulWidget {
 class _LayarBerandaState extends State<LayarBeranda> {
   ProfilToko? _profil;
   RekapHarian? _rekap;
+  bool? _perluOnboarding;
   Future<void> _draf = Future<void>.value();
 
   @override
@@ -58,8 +65,16 @@ class _LayarBerandaState extends State<LayarBeranda> {
   }
 
   Future<void> _muatProfil() async {
-    final profil = await widget.profil.muat() ?? _profilBawaan;
-    if (mounted) setState(() => _profil = profil);
+    final profil = await widget.profil.muat();
+    if (mounted) {
+      setState(() {
+        _profil = profil ?? _profilBawaan;
+        // Tidak adanya profil tersimpan adalah satu-satunya penanda bahwa
+        // toko ini belum pernah diatur — tidak perlu flag terpisah yang bisa
+        // melenceng dari kenyataan.
+        _perluOnboarding = profil == null;
+      });
+    }
   }
 
   Future<void> _muatRekap() async {
@@ -99,16 +114,25 @@ class _LayarBerandaState extends State<LayarBeranda> {
   }
 
   void _bukaPengaturan() {
+    // Dibaca sebelum push: rute baru tidak berada di bawah provider yang
+    // dipasang di rute ini, sedangkan pemulihan mengganti daftar favorit.
+    final favorit = context.read<FavoritController>();
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => LayarPengaturan(
           profil: widget.profil,
           pengaturan: widget.pengaturan,
           pencadang: widget.pencadang,
+          pemulih: widget.pemulih,
           // Nama toko yang baru harus langsung terlihat di sini, dan struk
           // berikutnya harus memakai profil baru — profil yang basi berarti
-          // struk pembeli mencetak nama toko yang salah.
-          onTersimpan: _muatProfil,
+          // struk pembeli mencetak nama toko yang salah. Pemulihan mengganti
+          // penjualan dan favorit sekaligus, jadi keduanya ikut disegarkan.
+          onTersimpan: () {
+            _muatProfil();
+            _muatRekap();
+            favorit.muat();
+          },
         ),
       ),
     );
@@ -117,8 +141,17 @@ class _LayarBerandaState extends State<LayarBeranda> {
   @override
   Widget build(BuildContext context) {
     final profil = _profil;
-    if (profil == null) {
+    final perluOnboarding = _perluOnboarding;
+    if (profil == null || perluOnboarding == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (perluOnboarding) {
+      return LayarOnboarding(
+        profil: widget.profil,
+        pemulih: widget.pemulih,
+        onSelesai: _muatProfil,
+      );
     }
 
     final keranjang = context.watch<KeranjangController>();

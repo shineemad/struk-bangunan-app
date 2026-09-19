@@ -13,10 +13,12 @@ import 'package:struk_bangunan/domain/profil_toko.dart';
 import 'package:struk_bangunan/domain/transaksi.dart';
 import 'package:struk_bangunan/state/favorit_controller.dart';
 import 'package:struk_bangunan/state/keranjang_controller.dart';
+import 'package:struk_bangunan/state/pemulih.dart';
 import 'package:struk_bangunan/state/pencadang.dart';
 import 'package:struk_bangunan/state/pengirim_struk.dart';
 import 'package:struk_bangunan/ui/beranda/layar_beranda.dart';
 import 'package:struk_bangunan/ui/kasir/layar_kasir.dart';
+import 'package:struk_bangunan/ui/onboarding/layar_onboarding.dart';
 import 'package:struk_bangunan/ui/pengaturan/layar_pengaturan.dart';
 import 'package:struk_bangunan/ui/struk/layar_pratinjau.dart';
 import 'package:struk_bangunan/ui/tema.dart';
@@ -41,12 +43,25 @@ class _PencadangPalsu implements PencadangKontrak {
   Future<String> cadangkan(DateTime sekarang) async => 'tidak-dipakai.json';
 }
 
+class _PemulihPalsu implements PemulihKontrak {
+  @override
+  Future<bool> pulihkan() async => false;
+}
+
 Future<void> _pasang(
   WidgetTester tester,
   SharedPreferences prefs, {
   Size? ukuran,
   List<ItemBelanja> penjualanHariIni = const [],
+  bool denganProfil = true,
 }) async {
+  // Beranda kini menyerahkan layar kepada onboarding selama profil belum
+  // ada, jadi test yang menyoroti Beranda harus punya toko yang sudah diatur.
+  if (denganProfil && await ProfilRepository(prefs).muat() == null) {
+    await ProfilRepository(
+      prefs,
+    ).simpan(const ProfilToko(namaToko: 'TOKO UJI'));
+  }
   if (ukuran != null) {
     tester.view.devicePixelRatio = 1.0;
     tester.view.physicalSize = ukuran;
@@ -92,6 +107,7 @@ Future<void> _pasang(
           transaksi: TransaksiRepository(db),
           pengirim: _PengirimPalsu(),
           pencadang: _PencadangPalsu(),
+          pemulih: _PemulihPalsu(),
         ),
       ),
     ),
@@ -112,15 +128,37 @@ void main() {
     expect(find.text('Toko Makmur Jaya'), findsOneWidget);
   });
 
-  testWidgets('memakai nama bawaan bila profil belum pernah diatur', (
+  testWidgets('toko yang belum pernah diatur melihat onboarding lebih dulu', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 
-    await _pasang(tester, prefs);
+    await _pasang(tester, prefs, denganProfil: false);
 
-    expect(find.text('TOKO BANGUNAN'), findsOneWidget);
+    expect(find.byType(LayarOnboarding), findsOneWidget);
+    expect(
+      find.byKey(const Key('tombol-transaksi-baru-beranda')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('beranda tampil begitu onboarding diselesaikan', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pasang(tester, prefs, denganProfil: false);
+
+    await tester.enterText(
+      find.byKey(const Key('onboarding-nama-toko')),
+      'Toko Sumber Rezeki',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('tombol-mulai')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LayarOnboarding), findsNothing);
+    expect(find.text('Toko Sumber Rezeki'), findsOneWidget);
   });
 
   testWidgets('tombol transaksi baru membuka layar kasir', (tester) async {
