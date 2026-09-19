@@ -2,7 +2,7 @@
 ///
 /// Aplikasi sungguhannya **tidak bisa** jalan di web — `sqflite` dan plugin
 /// printer tidak punya dukungan web. Di sini hanya lapisan basis data yang
-/// diganti stand-in dalam memori; tema, formatter, mesin struk, dan kedua
+/// diganti stand-in dalam memori; tema, formatter, mesin struk, dan seluruh
 /// layar adalah kode produksi apa adanya. Draf keranjang tetap nyata, karena
 /// `SharedPreferences` memang jalan di browser.
 library;
@@ -14,62 +14,32 @@ import 'package:sqflite/sqflite.dart';
 
 import 'data/draf_repository.dart';
 import 'data/favorit_repository.dart';
+import 'data/pengaturan_keluaran_repository.dart';
+import 'data/profil_repository.dart';
 import 'data/transaksi_repository.dart';
-import 'domain/profil_toko.dart';
 import 'domain/transaksi.dart';
 import 'output/png_renderer.dart';
 import 'state/favorit_controller.dart';
 import 'state/keranjang_controller.dart';
 import 'state/pengirim_struk.dart';
-import 'ui/kasir/layar_kasir.dart';
-import 'ui/struk/layar_pratinjau.dart';
+import 'ui/beranda/layar_beranda.dart';
 import 'ui/tema.dart';
 
 /// Lebar bingkai ponsel. Design system menargetkan 360-390 dp; tanpa bingkai
 /// ini tata letak terlihat melar dan menyesatkan di layar desktop.
 const _lebarPonsel = 390.0;
 
-const _profil = ProfilToko(
-  namaToko: 'TB. SINAR BANGUNAN',
-  alamat: 'Jl. Raya Palu No. 12',
-  noHp: '0812-3456-7890',
-  catatan: 'Barang yang sudah dibeli tidak dapat ditukar.',
-  namaKasir: 'Rina',
-);
-
 final _pesan = GlobalKey<ScaffoldMessengerState>();
 
 void main() => runApp(const DemoKasirWeb());
 
+/// Menunggu `SharedPreferences` sebelum memasang `MultiProvider`+`MaterialApp`
+/// sungguhan. `MultiProvider` wajib membungkus `MaterialApp` (bukan berada
+/// di dalam `home`) — persis seperti `main.dart` — supaya `LayarKasir` yang
+/// didorong Beranda lewat `Navigator.push` tetap bisa membaca kedua
+/// controller dari rute barunya sendiri.
 class DemoKasirWeb extends StatelessWidget {
   const DemoKasirWeb({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'StrukBangunan — pratinjau web',
-      debugShowCheckedModeBanner: false,
-      scaffoldMessengerKey: _pesan,
-      theme: temaTerang(),
-      // `builder` membungkus setiap rute, termasuk layar Pratinjau yang
-      // didorong Navigator — kalau bingkainya dipasang di `home` saja, rute
-      // baru memenuhi seluruh jendela dan ilusi ponselnya pecah.
-      builder: (context, child) => ColoredBox(
-        color: Warna.garis,
-        child: Center(
-          child: SizedBox(
-            width: _lebarPonsel,
-            child: ClipRect(child: child),
-          ),
-        ),
-      ),
-      home: const _Muat(),
-    );
-  }
-}
-
-class _Muat extends StatelessWidget {
-  const _Muat();
 
   @override
   Widget build(BuildContext context) {
@@ -78,8 +48,8 @@ class _Muat extends StatelessWidget {
       builder: (context, hasil) {
         final prefs = hasil.data;
         if (prefs == null) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return const MaterialApp(
+            home: Scaffold(body: Center(child: CircularProgressIndicator())),
           );
         }
         return _Demo(prefs: prefs);
@@ -129,17 +99,27 @@ class _DemoState extends State<_Demo> {
         ChangeNotifierProvider<KeranjangController>.value(value: _keranjang),
         ChangeNotifierProvider<FavoritController>.value(value: _favorit),
       ],
-      child: Builder(
-        builder: (dalam) => LayarKasir(
-          onKirim: () => Navigator.of(dalam).push(
-            MaterialPageRoute<void>(
-              builder: (_) => LayarPratinjau(
-                profil: _profil,
-                keranjang: _keranjang,
-                pengirim: _PengirimDemo(_lapor),
-              ),
+      child: MaterialApp(
+        title: 'StrukBangunan — pratinjau web',
+        debugShowCheckedModeBanner: false,
+        scaffoldMessengerKey: _pesan,
+        theme: temaTerang(),
+        // `builder` membungkus setiap rute, termasuk layar yang didorong
+        // Navigator — kalau bingkainya dipasang di `home` saja, rute baru
+        // memenuhi seluruh jendela dan ilusi ponselnya pecah.
+        builder: (context, child) => ColoredBox(
+          color: Warna.garis,
+          child: Center(
+            child: SizedBox(
+              width: _lebarPonsel,
+              child: ClipRect(child: child),
             ),
           ),
+        ),
+        home: LayarBeranda(
+          profil: ProfilRepository(widget.prefs),
+          pengaturan: PengaturanKeluaranRepository(widget.prefs),
+          pengirim: _PengirimDemo(_lapor),
         ),
       ),
     );
