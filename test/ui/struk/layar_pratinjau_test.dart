@@ -8,6 +8,7 @@ import 'package:struk_bangunan/data/transaksi_repository.dart';
 import 'package:struk_bangunan/domain/item_belanja.dart';
 import 'package:struk_bangunan/domain/profil_toko.dart';
 import 'package:struk_bangunan/domain/transaksi.dart';
+import 'package:struk_bangunan/output/receipt_widget.dart';
 import 'package:struk_bangunan/state/keranjang_controller.dart';
 import 'package:struk_bangunan/state/pengirim_struk.dart';
 import 'package:struk_bangunan/ui/struk/layar_pratinjau.dart';
@@ -50,6 +51,63 @@ class _PengirimGagal implements PengirimStrukKontrak {
 }
 
 void main() {
+  testWidgets(
+    'struk 80mm tampil utuh dan pesan penutupnya terbaca di layar 360dp',
+    (tester) async {
+      // Ditemukan di perangkat nyata: 48 kolom lebih lebar dari layar ponsel,
+      // dan `softWrap: false` di ReceiptWidget memotong kanannya diam-diam —
+      // termasuk ekor pesan penutup, sehingga terlihat seperti tidak
+      // berfungsi.
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(360, 780);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      SharedPreferences.setMockInitialValues({});
+      final db = await bukaBasisdataUji();
+      await siapkanSkema(db);
+      addTearDown(db.close);
+      final prefs = await SharedPreferences.getInstance();
+
+      final keranjang = KeranjangController(
+        draf: DrafRepository(prefs),
+        transaksi: TransaksiRepository(db),
+        favorit: FavoritRepository(db),
+      );
+      await keranjang.tambah(
+        ItemBelanja(nama: 'Semen', qty: 3, satuan: 'sak', hargaSatuan: 65000),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaTerang(),
+          home: LayarPratinjau(
+            profil: const ProfilToko(
+              namaToko: 'TB. SINAR BANGUNAN',
+              catatan: 'Barang yang sudah dibeli tidak dapat ditukar.',
+              lebarKertas: 80,
+            ),
+            keranjang: keranjang,
+            pengirim: _PengirimPalsu(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Ukuran lokal = ukuran alami struk sebelum diperkecil. Kalau ia sama
+      // dengan lebar layar, berarti struk dijepit dan kanannya terpotong.
+      final lokal = tester.getSize(find.byType(ReceiptWidget));
+      expect(lokal.width, greaterThan(360));
+
+      // Ukuran di layar sesudah diperkecil wajib muat.
+      final dilayar = tester.getRect(find.byType(ReceiptWidget));
+      expect(dilayar.width, lessThanOrEqualTo(360));
+
+      expect(find.textContaining('tidak dapat ditukar'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('menyimpan lebih dulu, baru membagikan', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final db = await bukaBasisdataUji();

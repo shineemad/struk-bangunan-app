@@ -113,7 +113,13 @@ class _LayarPratinjauState extends State<LayarPratinjau> {
         child: ListView(
           padding: const EdgeInsets.all(Ukuran.jarak),
           children: [
-            Center(
+            // Struk 80mm butuh 48 kolom — lebih lebar dari layar ponsel.
+            // `scaleDown` mengecilkannya agar utuh; tanpa ini `softWrap:
+            // false` di ReceiptWidget memotong kanannya diam-diam, termasuk
+            // ekor pesan penutup. Boundary berada DI DALAM FittedBox supaya
+            // PNG tetap tertangkap pada ukuran aslinya.
+            FittedBox(
+              fit: BoxFit.scaleDown,
               child: RepaintBoundary(
                 key: _kunciStruk,
                 child: ReceiptWidget(dokumen: dokumen, ukuranFont: 13),
